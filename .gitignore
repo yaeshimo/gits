@@ -1,0 +1,5 @@
+gitcha
+gits
+t/*
+!t/.gitignore
+*.prof
