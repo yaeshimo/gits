@@ -22,6 +22,11 @@ type option struct {
 	watchlist string
 }
 
+// recursive walker
+// use: git --git-dir=/path/to/work/.git --work-tree=/path/to/work
+func gitWalker() {
+}
+
 func run(w io.Writer, errw io.Writer, args []string) int {
 	opt := &option{}
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
