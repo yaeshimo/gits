@@ -25,9 +25,9 @@ type option struct {
 func run(w io.Writer, errw io.Writer, args []string) int {
 	opt := &option{}
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
-	flags.StringVar(&opt.gitname, "gitname", "git", "")
 	flags.BoolVar(&opt.version, "version", false, "")
-	flags.StringVar(&opt.watchlist, "file", "", "")
+	flags.StringVar(&opt.gitname, "gitname", "git", "")
+	flags.StringVar(&opt.watchlist, "watchlist", "", "")
 	flags.Parse(args[1:])
 	if flags.NArg() == 0 {
 		if opt.version {
@@ -38,19 +38,19 @@ func run(w io.Writer, errw io.Writer, args []string) int {
 		fmt.Fprintln(errw, "not enough argument")
 		return exitWithErr
 	}
-	git, err := newGit(w, errw, opt.gitname, time.Minute)
-	if err != nil {
-		fmt.Fprintln(errw, err)
-		return exitWithErr
-	}
-	// accept commands passing
 	switch flags.Arg(0) {
+	// accept commands passing
 	case "status", "version":
 	default:
 		fmt.Fprintf(errw, "invalid argument: %+v", flags.Args())
 		return exitWithErr
 	}
 	// TODO: fix for multitarget
+	git, err := newGit(w, errw, opt.gitname, time.Minute)
+	if err != nil {
+		fmt.Fprintln(errw, err)
+		return exitWithErr
+	}
 	if err := git.run(flags.Args()); err != nil {
 		fmt.Fprintln(errw, err)
 		return exitWithErr
