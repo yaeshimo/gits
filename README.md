@@ -6,6 +6,7 @@ Usage:
 
 Requirements:
 -------------
+`git`
 
 Install:
 --------
