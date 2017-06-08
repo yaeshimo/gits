@@ -1,5 +1,6 @@
 gits
 ====
+git wrapper
 
 Usage:
 ------

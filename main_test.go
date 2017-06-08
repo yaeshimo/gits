@@ -9,11 +9,13 @@ import (
 	"testing"
 )
 
+// TODO: delete this, be graceful
 var TestGitDir = ""
 var TestNotGitDir = ""
 var TestRoot = ""
 var TestPWD = ""
 
+// TODO: delete this, be graceful
 func cd(dir string) {
 	if err := os.Chdir(dir); err != nil {
 		panic(err)
@@ -58,8 +60,10 @@ func TestMain(m *testing.M) {
 }
 
 func TestRun(t *testing.T) {
+	// TODO: be graceful
 	cd(TestGitDir)
 	defer cd(TestPWD)
+
 	tests := []struct {
 		args    []string
 		wanterr bool
@@ -77,7 +81,7 @@ func TestRun(t *testing.T) {
 			wanterr: false,
 		},
 		{
-			args:    []string{"gits", `-gitname=""`, "version"},
+			args:    []string{"gits", `-git=""`, "version"},
 			wanterr: true,
 		},
 		{
@@ -102,16 +106,16 @@ func TestRun(t *testing.T) {
 		switch exitCode {
 		case validExit:
 			if test.wanterr {
-				t.Errorf("t.Errorf: run[%d]: expected error but nil", i)
+				t.Errorf("t.Errorf [%d] expected error but nil", i)
 			}
 		case exitWithErr:
 			if test.wanterr {
-				t.Logf("t.Logf: run[%d]: passed error: %+v", i, errbuf)
+				t.Logf("t.Logf [%d] passed error: %+v", i, errbuf)
 			} else {
-				t.Errorf("t.Errorf: run[%d]: expected no error but exists: %+v", i, errbuf)
+				t.Errorf("t.Errorf [%d] err: %+v", i, errbuf)
 			}
 		}
-		t.Logf("t.Logf: run[%d]: outbuf: %+v", i, buf)
+		t.Logf("t.Logf [%d] outbuf: %+v", i, buf)
 		buf.Reset()
 		errbuf.Reset()
 	}
