@@ -15,7 +15,7 @@ type repoInfo struct {
 }
 type watchList map[string]repoInfo
 
-func readWatchList(fpath string) (*watchList, error) {
+func readWatchList(fpath string) (watchList, error) {
 	b, err := ioutil.ReadFile(fpath)
 	if err != nil {
 		return nil, err
@@ -24,14 +24,14 @@ func readWatchList(fpath string) (*watchList, error) {
 	if err := json.Unmarshal(b, w); err != nil {
 		return nil, err
 	}
-	return w, nil
+	return *w, nil
 }
 
 // TODO: implementation backup
-func writeWatchList(w *watchList, file string) error {
+func writeWatchList(w watchList, file string) error {
 	b, err := json.MarshalIndent(w, "", "  ")
 	if err != nil {
-		return err
+		return err // unreachable?
 	}
 	if err := ioutil.WriteFile(file, b, 0666); err != nil {
 		return err
@@ -50,7 +50,7 @@ func template(w io.Writer) error {
 	}
 	b, err := json.MarshalIndent(watch, "", "  ")
 	if err != nil {
-		return err
+		return err // unreachable?
 	}
 	fmt.Fprintln(w, string(b))
 	return nil
