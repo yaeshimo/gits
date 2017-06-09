@@ -40,6 +40,7 @@ type option struct {
 //    : consider RWMutex write buffer?
 func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	// work on current directory
+	// TODO: really need?
 	if wl.Map == nil {
 		msg := fmt.Sprintf("not found git repositories:\n\twork on current directory\n")
 		git.WriteErrString(msg)
@@ -90,7 +91,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 
 	// setting
 	flags.StringVar(&opt.git, "git", "git", "name of git command or fullpath")
-	flags.StringVar(&opt.conf, "conf", "", "path to json format watchlist")
+	flags.StringVar(&opt.conf, "conf", defConfPath, "path to json format watchlist")
 	flags.DurationVar(&opt.timeout, "timeout", time.Hour*12, "set timeout for running git")
 	flags.Parse(args[1:])
 
