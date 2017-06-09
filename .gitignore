@@ -1,5 +1,8 @@
 gitcha
 gits
+
+*.prof
+*.json
+
 t/*
 !t/.gitignore
-*.prof

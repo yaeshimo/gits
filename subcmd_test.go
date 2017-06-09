@@ -25,8 +25,8 @@ func TestSubcmd(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		sub := newSubcmd(ioutil.Discard, ioutil.Discard, test.cmdname, time.Second)
-		if err := sub.run(test.args); err != nil {
+		sub := newSubcmd(ioutil.Discard, ioutil.Discard, nil, test.cmdname, time.Second)
+		if err := sub.run("", test.args); err != nil {
 			if test.wanterr {
 				t.Logf("t.Logf err: %+v", err)
 			} else {

@@ -102,7 +102,7 @@ func TestRun(t *testing.T) {
 	buf := bytes.NewBufferString(s)
 	errbuf := bytes.NewBufferString(errs)
 	for i, test := range tests {
-		exitCode := run(buf, errbuf, test.args)
+		exitCode := run(buf, errbuf, nil, test.args)
 		switch exitCode {
 		case validExit:
 			if test.wanterr {

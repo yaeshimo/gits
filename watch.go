@@ -39,13 +39,17 @@ func writeWatchList(w watchList, file string) error {
 	return nil
 }
 
-// Test
 // TODO: fix for windows?
 func template(w io.Writer) error {
 	watch := make(watchList)
-	watch["template"] = repoInfo{
+	watch["repository name"] = repoInfo{
 		Gitdir:   "/path/to/repo/.git",
 		Workdir:  "/path/to/repo",
+		Readonly: false,
+	}
+	watch["template"] = repoInfo{
+		Gitdir:   "",
+		Workdir:  "",
 		Readonly: false,
 	}
 	b, err := json.MarshalIndent(watch, "", "  ")
