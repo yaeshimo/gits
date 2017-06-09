@@ -111,6 +111,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			return validExit
 		case opt.template:
 			if err := template(w); err != nil {
+				// unreachable?
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}

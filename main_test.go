@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -19,7 +21,42 @@ func TestMain(m *testing.M) {
 }
 
 // TODO: be graceful
+//     : fix for windows
 func TestRun(t *testing.T) {
+	gitdir, err := ioutil.TempDir("", "gits_gitdir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(gitdir)
+	f, err := ioutil.TempFile("", "gits_test_conf_json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	defer os.Remove(f.Name())
+	var confContent = string(`{
+  "restriction": [
+    "version",
+	"status"
+  ],
+  "repository":{
+    "test_repository": {
+      "gitdir": "` + filepath.Join(gitdir, ".git") + `",
+      "workdir": "` + gitdir + `"
+    }
+  }
+}`)
+	if _, err := f.WriteString(confContent); err != nil {
+		t.Fatal(err)
+	}
+
+	// for error check, -conf=vanishedFilePath
+	vanishedFilePath, err := ioutil.TempDir("", "gits_vanished_file_path")
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Remove(vanishedFilePath)
+
 	tests := []struct {
 		args    []string
 		wanterr bool
@@ -41,7 +78,6 @@ func TestRun(t *testing.T) {
 			args:    []string{"gits", "version"},
 			wanterr: false,
 		},
-
 		// invalid args
 		{
 			args:    []string{"gits"},
@@ -59,8 +95,29 @@ func TestRun(t *testing.T) {
 			args:    []string{"gits", "not implementation"},
 			wanterr: true,
 		},
+		// conf valid
+		{
+			args:    []string{"gits", "-conf", f.Name(), "version"},
+			wanterr: false,
+		},
+		{
+			args:    []string{"gits", "-conf", f.Name(), "-list"},
+			wanterr: false,
+		},
+		// conf invalid
+		{
+			args:    []string{"gits", "-conf", vanishedFilePath},
+			wanterr: true,
+		},
+		{
+			args:    []string{"gits", "-conf", f.Name(), "fetch"},
+			wanterr: true,
+		},
+		{
+			args:    []string{"gits", "-conf", f.Name(), "status", "--invalid-git-flags"},
+			wanterr: true,
+		},
 	}
-
 	var s, errs string
 	buf := bytes.NewBufferString(s)
 	errbuf := bytes.NewBufferString(errs)
