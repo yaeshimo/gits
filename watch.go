@@ -68,7 +68,7 @@ func template(w io.Writer) error {
 		},
 		Map: make(map[string]repoInfo),
 	}
-	watch.Map["your_repository_name"] = repoInfo{
+	watch.Map["repo"] = repoInfo{
 		Gitdir:  "/path/to/repo/.git",
 		Workdir: "/path/to/repo",
 	}
