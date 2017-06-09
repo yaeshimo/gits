@@ -56,7 +56,7 @@ func writeWatchList(w *watchList, file string) error {
 	return nil
 }
 
-// TODO: fix for windows?
+// TODO: fix for windows
 func template(w io.Writer) error {
 	watch := &watchList{
 		Restriction: []string{
@@ -64,9 +64,7 @@ func template(w io.Writer) error {
 			"version",
 			"fetch",
 			"grep",
-			"ls-remote",
 			"ls-files",
-			"ls-tree",
 		},
 		Map: make(map[string]repoInfo),
 	}
