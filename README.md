@@ -20,9 +20,12 @@ Requirements:
 
 Install:
 --------
-`go get github.com/kamisari/gits`  
-or  
-download binary on release page  
+`go get github.com/kamisari/gits`
+
+or
+
+download binary on release page
+
 TODO: make link
 
 License:
