@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+// TODO: be graceful
+
 var validSet = []struct {
 	outData []byte
 	wl      *watchList
@@ -37,7 +39,43 @@ var validSet = []struct {
 	},
 }
 
-// TODO: be graceful
+func TestWatchList(t *testing.T) {
+	t.Run("test isAllow", func(t *testing.T) {
+		tests := []struct {
+			restricton []string
+			firstArg   string
+			wantBool   bool
+		}{
+			{
+				restricton: nil,
+				firstArg:   "",
+				wantBool:   true,
+			},
+			{
+				restricton: []string{},
+				firstArg:   "",
+				wantBool:   true,
+			},
+			{
+				restricton: []string{"test", "version"},
+				firstArg:   "version",
+				wantBool:   true,
+			},
+			{
+				restricton: []string{"version"},
+				firstArg:   "test",
+				wantBool:   false,
+			},
+		}
+		for i, test := range tests {
+			wl := &watchList{Restriction: test.restricton}
+			if out := wl.isAllow(test.firstArg); out != test.wantBool {
+				t.Errorf("t.Errorf [%d]:\n\texp:%+v\n\tout:%+v", i, out, test.wantBool)
+			}
+		}
+	})
+}
+
 func TestReadWatchList(t *testing.T) {
 	f, err := ioutil.TempFile("", "gits_test_readwatchlist")
 	if err != nil {
