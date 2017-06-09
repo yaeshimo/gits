@@ -12,6 +12,7 @@ func TestMain(m *testing.M) {
 	_, err := exec.LookPath("git")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "test is stopped")
 		os.Exit(2)
 	}
 	os.Exit(m.Run())

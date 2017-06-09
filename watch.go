@@ -45,7 +45,7 @@ func readWatchList(fpath string) (*watchList, error) {
 }
 
 // TODO: implementation backup
-func writeWatchList(w watchList, file string) error {
+func writeWatchList(w *watchList, file string) error {
 	b, err := json.MarshalIndent(w, "", "  ")
 	if err != nil {
 		return err // unreachable?

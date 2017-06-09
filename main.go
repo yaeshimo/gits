@@ -81,6 +81,7 @@ func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	opt := option{}
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
+	flags.SetOutput(errw)
 
 	// one shot
 	flags.BoolVar(&opt.version, "version", false, "")

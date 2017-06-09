@@ -8,22 +8,12 @@ import (
 	"testing"
 )
 
-// TODO: be graceful
-func TestReadWatchList(t *testing.T) {
-	f, err := ioutil.TempFile("", "gits_test_readwatchlist")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	defer os.Remove(f.Name())
-
-	t.Run("check content", func(t *testing.T) {
-		tests := []struct {
-			writeData string
-			expected  *watchList
-		}{
-			{
-				writeData: `{
+var validSet = []struct {
+	outData []byte
+	wl      *watchList
+}{
+	{
+		outData: []byte(`{
   "restriction": [
     "version",
     "status"
@@ -34,23 +24,35 @@ func TestReadWatchList(t *testing.T) {
       "workdir": "/path/to/work"
     }
   }
-}`,
-				expected: &watchList{
-					Restriction: []string{"version", "status"},
-					Map: map[string]repoInfo{
-						"testdata": repoInfo{
-							Gitdir:  "/path/to/git/.git",
-							Workdir: "/path/to/work",
-						},
-					},
+}`),
+		wl: &watchList{
+			Restriction: []string{"version", "status"},
+			Map: map[string]repoInfo{
+				"testdata": repoInfo{
+					Gitdir:  "/path/to/git/.git",
+					Workdir: "/path/to/work",
 				},
 			},
-		}
+		},
+	},
+}
+
+// TODO: be graceful
+func TestReadWatchList(t *testing.T) {
+	f, err := ioutil.TempFile("", "gits_test_readwatchlist")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	defer os.Remove(f.Name())
+
+	t.Run("check content", func(t *testing.T) {
+		tests := validSet
 		for i, test := range tests {
 			if err := f.Truncate(0); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := f.WriteString(test.writeData); err != nil {
+			if _, err := f.Write(test.outData); err != nil {
 				t.Fatal(err)
 			}
 			out, err := readWatchList(f.Name())
@@ -58,8 +60,8 @@ func TestReadWatchList(t *testing.T) {
 				t.Errorf("t.Errorf:%+v", err)
 				continue
 			}
-			if !reflect.DeepEqual(test.expected, out) {
-				t.Errorf("t.Errorf [%d]\nexp:%+v\nout:%+v", i, test.expected, out)
+			if !reflect.DeepEqual(test.wl, out) {
+				t.Errorf("t.Errorf [%d]\nexp:%+v\nout:%+v", i, test.wl, out)
 				continue
 			} else {
 				t.Logf("t.Logf out: %+v", out)
@@ -100,56 +102,20 @@ func TestWriteWatchList(t *testing.T) {
 	defer os.Remove(f.Name())
 
 	t.Run("invalid filepath", func(t *testing.T) {
-		if err := writeWatchList(watchList{}, ""); err == nil {
+		if err := writeWatchList(&watchList{}, ""); err == nil {
 			t.Fatal("expected error but nil")
 		} else {
 			t.Logf("t.Logf err: %+v", err)
 		}
 	})
 
-	// TODO: consider case nil
-	//t.Run("invalid json marshal", func(t *testing.T) {
-	//	if err := writeWatchList(nil, f.Name()); err == nil {
-	//		t.Fatal("expected error but nil")
-	//	} else {
-	//		t.Logf("t.Logf err: %+v", err)
-	//	}
-	//})
-
 	t.Run("check writed content", func(t *testing.T) {
-		tests := []struct {
-			writeData watchList
-			expected  []byte
-		}{
-			{
-				writeData: watchList{
-					Restriction: []string{"version", "status"},
-					Map: map[string]repoInfo{
-						"testdata": repoInfo{
-							Gitdir:  "/path/to/git/.git",
-							Workdir: "/path/to/work",
-						},
-					},
-				},
-				expected: []byte(`{
-  "restriction": [
-    "version",
-    "status"
-  ],
-  "repository": {
-    "testdata": {
-      "gitdir": "/path/to/git/.git",
-      "workdir": "/path/to/work"
-    }
-  }
-}`),
-			},
-		}
+		tests := validSet
 		for i, test := range tests {
 			if err := f.Truncate(0); err != nil {
 				t.Fatal(err)
 			}
-			if err := writeWatchList(test.writeData, f.Name()); err != nil {
+			if err := writeWatchList(test.wl, f.Name()); err != nil {
 				t.Errorf("t.Errorf [%d]: %+v", i, err)
 				continue
 			}
@@ -157,8 +123,8 @@ func TestWriteWatchList(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !bytes.Equal(test.expected, out) {
-				t.Errorf("t.Errorf [%d]: exp:%+v\nout:%+v", i, string(test.expected), string(out))
+			if !bytes.Equal(test.outData, out) {
+				t.Errorf("t.Errorf [%d]: exp:%+v\nout:%+v", i, string(test.outData), string(out))
 			} else {
 				t.Logf("t.Logf [%d]: out:%+v", i, string(out))
 			}
