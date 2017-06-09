@@ -13,6 +13,9 @@ type repoInfo struct {
 	Workdir string `json:"workdir"`
 }
 type watchList struct {
+	// command restriction
+	// if Restriction is nil or length 0 then
+	// allow all command
 	Restriction []string            `json:"restriction"`
 	Map         map[string]repoInfo `json:"repository"`
 }
@@ -67,7 +70,7 @@ func template(w io.Writer) error {
 		},
 		Map: make(map[string]repoInfo),
 	}
-	watch.Map["repository name"] = repoInfo{
+	watch.Map["your_repository_name"] = repoInfo{
 		Gitdir:  "/path/to/repo/.git",
 		Workdir: "/path/to/repo",
 	}

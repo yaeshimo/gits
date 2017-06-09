@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// TODO: be graceful
 func TestReadWatchList(t *testing.T) {
 	f, err := ioutil.TempFile("", "gits_test_readwatchlist")
 	if err != nil {
@@ -19,21 +20,28 @@ func TestReadWatchList(t *testing.T) {
 	t.Run("check content", func(t *testing.T) {
 		tests := []struct {
 			writeData string
-			expected  watchList
+			expected  *watchList
 		}{
 			{
 				writeData: `{
-  "testdata": {
-    "gitdir": "/path/to/git/.git",
-    "workdir": "/path/to/work",
-    "readonly": false
+  "restriction": [
+    "version",
+    "status"
+  ],
+  "repository": {
+    "testdata": {
+      "gitdir": "/path/to/git/.git",
+      "workdir": "/path/to/work"
+    }
   }
 }`,
-				expected: map[string]repoInfo{
-					"testdata": repoInfo{
-						Gitdir:   "/path/to/git/.git",
-						Workdir:  "/path/to/work",
-						Readonly: false,
+				expected: &watchList{
+					Restriction: []string{"version", "status"},
+					Map: map[string]repoInfo{
+						"testdata": repoInfo{
+							Gitdir:  "/path/to/git/.git",
+							Workdir: "/path/to/work",
+						},
 					},
 				},
 			},
@@ -114,18 +122,25 @@ func TestWriteWatchList(t *testing.T) {
 			expected  []byte
 		}{
 			{
-				writeData: map[string]repoInfo{
-					"testdata": repoInfo{
-						Gitdir:   "/path/to/git/.git",
-						Workdir:  "/path/to/work",
-						Readonly: false,
+				writeData: watchList{
+					Restriction: []string{"version", "status"},
+					Map: map[string]repoInfo{
+						"testdata": repoInfo{
+							Gitdir:  "/path/to/git/.git",
+							Workdir: "/path/to/work",
+						},
 					},
 				},
 				expected: []byte(`{
-  "testdata": {
-    "gitdir": "/path/to/git/.git",
-    "workdir": "/path/to/work",
-    "readonly": false
+  "restriction": [
+    "version",
+    "status"
+  ],
+  "repository": {
+    "testdata": {
+      "gitdir": "/path/to/git/.git",
+      "workdir": "/path/to/work"
+    }
   }
 }`),
 			},

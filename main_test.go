@@ -3,72 +3,31 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
 )
 
-// TODO: delete this, be graceful
-var TestGitDir = ""
-var TestNotGitDir = ""
-var TestRoot = ""
-var TestPWD = ""
-
-// TODO: delete this, be graceful
-func cd(dir string) {
-	if err := os.Chdir(dir); err != nil {
-		panic(err)
+func TestMain(m *testing.M) {
+	_, err := exec.LookPath("git")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
 	}
+	os.Exit(m.Run())
 }
 
 // TODO: be graceful
-func TestMain(m *testing.M) {
-	exitCode := func() int {
-		git, err := exec.LookPath("git")
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
-		TestPWD, err = os.Getwd()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-
-		mktmpdir := func(root string, prefix string) string {
-			s, err := ioutil.TempDir(root, prefix)
-			if err != nil {
-				panic(err)
-			}
-			return s
-		}
-		TestRoot = mktmpdir("", "gits_test")
-		defer os.RemoveAll(TestRoot)
-		TestGitDir = mktmpdir(TestRoot, "gitdir")
-		TestNotGitDir = mktmpdir(TestRoot, "notgitdir")
-
-		cd(TestGitDir)
-		if err := exec.Command(git, "init").Run(); err != nil {
-			panic(err)
-		}
-		cd(TestPWD)
-		return m.Run()
-	}()
-	os.Exit(exitCode)
-}
-
 func TestRun(t *testing.T) {
-	// TODO: be graceful
-	cd(TestGitDir)
-	defer cd(TestPWD)
-
 	tests := []struct {
 		args    []string
 		wanterr bool
 	}{
 		// gits flags
+		{
+			args:    []string{"gits"},
+			wanterr: true,
+		},
 		{
 			args:    []string{"gits", "-version"},
 			wanterr: false,
@@ -88,15 +47,7 @@ func TestRun(t *testing.T) {
 			wanterr: false,
 		},
 		{
-			args:    []string{"gits", "status"},
-			wanterr: false,
-		},
-		{
 			args:    []string{"gits", "status", "--invalid--git--flags"},
-			wanterr: true,
-		},
-		{
-			args:    []string{"gits"},
 			wanterr: true,
 		},
 		{
