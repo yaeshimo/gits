@@ -8,24 +8,37 @@ import (
 )
 
 // use json
-// TODO: remove Readonly?
 type repoInfo struct {
-	Gitdir   string `json:"gitdir"`
-	Workdir  string `json:"workdir"`
-	Readonly bool   `json:"readonly"`
+	Gitdir  string `json:"gitdir"`
+	Workdir string `json:"workdir"`
 }
-type watchList map[string]repoInfo
+type watchList struct {
+	Restriction []string            `json:"restriction"`
+	Map         map[string]repoInfo `json:"repository"`
+}
 
-func readWatchList(fpath string) (watchList, error) {
+func (wl *watchList) isAllow(firstArg string) bool {
+	if wl.Restriction == nil || len(wl.Restriction) == 0 {
+		return true // Allow all commands
+	}
+	for _, s := range wl.Restriction {
+		if s == firstArg {
+			return true
+		}
+	}
+	return false
+}
+
+func readWatchList(fpath string) (*watchList, error) {
 	b, err := ioutil.ReadFile(fpath)
 	if err != nil {
 		return nil, err
 	}
-	w := new(watchList)
-	if err := json.Unmarshal(b, w); err != nil {
+	wl := &watchList{}
+	if err := json.Unmarshal(b, wl); err != nil {
 		return nil, err
 	}
-	return *w, nil
+	return wl, nil
 }
 
 // TODO: implementation backup
@@ -42,16 +55,25 @@ func writeWatchList(w watchList, file string) error {
 
 // TODO: fix for windows?
 func template(w io.Writer) error {
-	watch := make(watchList)
-	watch["repository name"] = repoInfo{
-		Gitdir:   "/path/to/repo/.git",
-		Workdir:  "/path/to/repo",
-		Readonly: false,
+	watch := &watchList{
+		Restriction: []string{
+			"status",
+			"version",
+			"fetch",
+			"grep",
+			"ls-remote",
+			"ls-files",
+			"ls-tree",
+		},
+		Map: make(map[string]repoInfo),
 	}
-	watch["template"] = repoInfo{
-		Gitdir:   "",
-		Workdir:  "",
-		Readonly: false,
+	watch.Map["repository name"] = repoInfo{
+		Gitdir:  "/path/to/repo/.git",
+		Workdir: "/path/to/repo",
+	}
+	watch.Map["template"] = repoInfo{
+		Gitdir:  "",
+		Workdir: "",
 	}
 	b, err := json.MarshalIndent(watch, "", "  ")
 	if err != nil {

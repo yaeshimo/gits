@@ -51,6 +51,7 @@ func (sub *subcmd) WriteString(s string) (int, error) {
 	defer sub.rwmux.Unlock()
 	return fmt.Fprintln(sub.w, s)
 }
+
 func (sub *subcmd) WriteErrString(s string) (int, error) {
 	sub.rwmux.Lock()
 	defer sub.rwmux.Unlock()

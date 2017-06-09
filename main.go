@@ -21,21 +21,6 @@ const (
 	exitWithErr
 )
 
-// TODO: split to outside json file
-var acceptFirstGitArgs = []string{
-	"status",
-	"version",
-	"fetch",
-	"grep",
-	"ls-remote",
-	"ls-files",
-	"ls-tree",
-
-	"diff",
-	"add",
-	"commit",
-}
-
 type option struct {
 	version  bool
 	template bool
@@ -53,9 +38,11 @@ type option struct {
 // repository walker
 // use: git --git-dir=/path/to/work/.git --work-tree=/path/to/work
 //    : consider RWMutex write buffer?
-func gitWalker(git *subcmd, repoMap watchList, args []string) []error {
+func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	// work on current directory
-	if repoMap == nil {
+	if wl.Map == nil {
+		msg := fmt.Sprintf("not found git repositories:\n\twork on current directory\n")
+		git.WriteErrString(msg)
 		if err := git.run("", args); err != nil {
 			return []error{err}
 		}
@@ -68,7 +55,7 @@ func gitWalker(git *subcmd, repoMap watchList, args []string) []error {
 		wg   = new(sync.WaitGroup)
 	)
 
-	for key, repoInfo := range repoMap {
+	for key, repoInfo := range wl.Map {
 		argsWithRepo := append(
 			[]string{
 				"--git-dir=" + repoInfo.Gitdir,
@@ -92,18 +79,30 @@ func gitWalker(git *subcmd, repoMap watchList, args []string) []error {
 
 // TODO: be graceful
 func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
-	opt := &option{}
+	opt := option{}
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 
+	// one shot
 	flags.BoolVar(&opt.version, "version", false, "")
 	flags.BoolVar(&opt.template, "template", false, "output template json")
 	flags.BoolVar(&opt.list, "list", false, "list accept git commands")
 
+	// setting
 	flags.StringVar(&opt.git, "git", "git", "name of git command or fullpath")
 	flags.StringVar(&opt.conf, "conf", "", "path to json format watchlist")
 	flags.DurationVar(&opt.timeout, "timeout", time.Hour*12, "set timeout for running git")
-
 	flags.Parse(args[1:])
+
+	wl := &watchList{}
+	var err error
+	if opt.conf != "" {
+		wl, err = readWatchList(opt.conf)
+		if err != nil {
+			fmt.Fprintln(errw, err)
+			return exitWithErr
+		}
+	}
+
 	if flags.NArg() == 0 {
 		switch {
 		case opt.version:
@@ -117,51 +116,27 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			return validExit
 		case opt.list:
 			fmt.Fprintln(w, "Accept git commands:")
-			for _, s := range acceptFirstGitArgs {
-				fmt.Fprintf(w, "\t%s\n", s)
+			if wl.Restriction == nil || len(wl.Restriction) == 0 {
+				fmt.Fprintln(w, "\t[Allow all git commmands]")
+				return validExit
+			}
+			for _, s := range wl.Restriction {
+				fmt.Fprintf(w, "\t[%s]\n", s)
 			}
 			return validExit
 		default:
-			// TODO: change default run is to status?
-			fmt.Fprintln(w, "Accept git commands:")
-			for _, s := range acceptFirstGitArgs {
-				fmt.Fprintf(w, "\t%s\n", s)
-			}
-			//fmt.Fprintln(errw, "Not enough argument")
+			flags.Usage()
 			return exitWithErr
 		}
 	}
 
-	// TODO: split to another function
-	//     : func(*watchList, fa string, check1, check2 []string) error
-	//     : delete keis: fa == in(check2) && readonly == true
-	//     : if err != nil { echo errmsg; return exitWithErr }
-	accept := false
-	subname := flags.Arg(0)
-	for _, s := range acceptFirstGitArgs {
-		if s == subname {
-			accept = true
-			break
-		}
-	}
-	if !accept {
+	if !wl.isAllow(flags.Arg(0)) {
 		fmt.Fprintf(errw, "invalid argument: %+v\n", flags.Args())
 		return exitWithErr
 	}
 
-	// TODO: move position
-	var repoMap watchList
-	var err error
-	if opt.conf != "" {
-		repoMap, err = readWatchList(opt.conf)
-		if err != nil {
-			fmt.Fprintln(errw, err)
-			return exitWithErr
-		}
-	}
-
 	git := newSubcmd(w, errw, r, opt.git, opt.timeout)
-	if errs := gitWalker(git, repoMap, flags.Args()); errs != nil {
+	if errs := gitWalker(git, wl, flags.Args()); errs != nil {
 		fmt.Fprintln(errw, errs)
 		return exitWithErr
 	}
