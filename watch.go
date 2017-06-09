@@ -8,6 +8,7 @@ import (
 )
 
 // use json
+// TODO: remove Readonly?
 type repoInfo struct {
 	Gitdir   string `json:"gitdir"`
 	Workdir  string `json:"workdir"`

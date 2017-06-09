@@ -21,6 +21,7 @@ const (
 	exitWithErr
 )
 
+// TODO: split to outside json file
 var acceptFirstGitArgs = []string{
 	"status",
 	"version",
@@ -42,6 +43,7 @@ type option struct {
 	// TODO: consider add flags
 	// watch string // add current git repository to watchlist.json
 	// unwatch string // remove current git repository on watchlist.json
+	// logfile string // specify output logfile
 
 	git     string
 	conf    string
@@ -158,27 +160,11 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		}
 	}
 
-	//var s, errs string
-	//buf := bytes.NewBufferString(s)
-	//errbuf := bytes.NewBufferString(errs)
-	//git := newSubcmd(buf, errbuf, r, opt.git, opt.timeout)
-	//if errs := gitWalker(git, repoMap, flags.Args()); errs != nil {
-	//	fmt.Fprintln(errw, buf)
-	//	fmt.Fprintln(errw, "---------- FOUND ERRORS ----------")
-	//	fmt.Fprintln(errw, errbuf)
-	//	fmt.Fprintln(errw, errs)
-	//	return exitWithErr
-	//}
-	//fmt.Fprintln(w, buf) // result
-
-	/// debug
 	git := newSubcmd(w, errw, r, opt.git, opt.timeout)
 	if errs := gitWalker(git, repoMap, flags.Args()); errs != nil {
 		fmt.Fprintln(errw, errs)
 		return exitWithErr
 	}
-	///
-
 	return validExit
 }
 

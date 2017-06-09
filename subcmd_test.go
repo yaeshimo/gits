@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"io/ioutil"
+	"sync"
 	"testing"
 	"time"
 )
@@ -36,4 +39,42 @@ func TestSubcmd(t *testing.T) {
 			t.Errorf("expected error but nil")
 		}
 	}
+}
+
+func BenchmarkSubcmd(b *testing.B) {
+	b.Run("goroutine", func(b *testing.B) {
+		var s, errs string
+		buf := bytes.NewBufferString(s)
+		errbuf := bytes.NewBufferString(errs)
+		git := newSubcmd(buf, errbuf, nil, "git", time.Hour)
+		args := []string{"version"}
+		wg := new(sync.WaitGroup)
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				if err := git.run(fmt.Sprintln(i), args); err != nil {
+					b.Fatal(err)
+				}
+			}(i)
+		}
+		wg.Wait()
+	})
+
+	b.Run("single", func(b *testing.B) {
+		var s, errs string
+		buf := bytes.NewBufferString(s)
+		errbuf := bytes.NewBufferString(errs)
+		git := newSubcmd(buf, errbuf, nil, "git", time.Hour)
+		args := []string{"version"}
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			if err := git.run(fmt.Sprintln(i), args); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }

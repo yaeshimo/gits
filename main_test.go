@@ -68,6 +68,21 @@ func TestRun(t *testing.T) {
 		args    []string
 		wanterr bool
 	}{
+		// gits flags
+		{
+			args:    []string{"gits", "-version"},
+			wanterr: false,
+		},
+		{
+			args:    []string{"gits", "-list"},
+			wanterr: false,
+		},
+		{
+			args:    []string{"gits", `-git=""`, "version"},
+			wanterr: true,
+		},
+
+		// git arguments
 		{
 			args:    []string{"gits", "version"},
 			wanterr: false,
@@ -75,14 +90,6 @@ func TestRun(t *testing.T) {
 		{
 			args:    []string{"gits", "status"},
 			wanterr: false,
-		},
-		{
-			args:    []string{"gits", "-version"},
-			wanterr: false,
-		},
-		{
-			args:    []string{"gits", `-git=""`, "version"},
-			wanterr: true,
 		},
 		{
 			args:    []string{"gits", "status", "--invalid--git--flags"},
