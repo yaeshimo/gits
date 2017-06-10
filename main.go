@@ -30,6 +30,10 @@ type option struct {
 	// unwatch string // remove current git repository on watchlist.json
 	// logfile string // specify output logfile
 
+	// TODO: impl watch unwatch
+	watch   string /// add watch to conf
+	unwatch string /// delte watch to conf
+
 	git     string
 	conf    string
 	timeout time.Duration
@@ -89,6 +93,9 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	flags.BoolVar(&opt.template, "template", false, "output template json")
 	flags.BoolVar(&opt.list, "list", false, "list accept git commands")
 
+	flags.StringVar(&opt.watch, "watch", "", "add watch repository to conf")
+	flags.StringVar(&opt.unwatch, "unwatch", "", "remove watch repository in conf")
+
 	// setting
 	flags.StringVar(&opt.git, "git", "git", "name of git command or fullpath")
 	flags.StringVar(&opt.conf, "conf", defConfPath, "path to json format watchlist")
@@ -105,6 +112,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		}
 	}
 
+	// be graceful
 	if flags.NArg() == 0 {
 		switch {
 		case opt.version:
@@ -118,14 +126,41 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			}
 			return validExit
 		case opt.list:
-			fmt.Fprintln(w, "Accept git commands:")
-			if wl.Restriction == nil || len(wl.Restriction) == 0 {
-				fmt.Fprintln(w, "\t[Allow all git commmands]")
-				return validExit
+			fmt.Fprintf(w, "conf:[%s]\n%s\n", opt.conf, wl)
+			return validExit
+		case opt.watch != "":
+			fullpath, key, err := keyAbs(opt.watch)
+			if err != nil {
+				fmt.Fprintln(errw, err)
+				return exitWithErr
 			}
-			for _, s := range wl.Restriction {
-				fmt.Fprintf(w, "\t[%s]\n", s)
+			if err := wl.watch(fullpath, key); err != nil {
+				fmt.Fprintln(errw, err)
+				return exitWithErr
 			}
+			if err := wl.writeWatchList(opt.conf); err != nil {
+				fmt.Fprintln(errw, err)
+				return exitWithErr
+			}
+			fmt.Fprintf(w, "conf:[%s]\n%s\n", opt.conf, wl)
+			fmt.Fprintf(w, "appended [%s] in [%s]\n", key, opt.conf)
+			return validExit
+		case opt.unwatch != "":
+			_, key, err := keyAbs(opt.unwatch)
+			if err != nil {
+				fmt.Fprintln(errw, err)
+				return exitWithErr
+			}
+			if err := wl.unwatch(key); err != nil {
+				fmt.Fprintln(errw, err)
+				return exitWithErr
+			}
+			if err := wl.writeWatchList(opt.conf); err != nil {
+				fmt.Fprintln(errw, err)
+				return exitWithErr
+			}
+			fmt.Fprintf(w, "conf:[%s]\n%s\n", opt.conf, wl)
+			fmt.Fprintf(w, "removed [%s] in [%s]\n", key, opt.conf)
 			return validExit
 		default:
 			flags.Usage()
