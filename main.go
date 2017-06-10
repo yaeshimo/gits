@@ -140,6 +140,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 
 	git := newSubcmd(w, errw, r, opt.git, opt.timeout)
 	if errs := gitWalker(git, wl, flags.Args()); errs != nil {
+		fmt.Fprintln(errw, "---------- found error ----------")
 		fmt.Fprintln(errw, errs)
 		return exitWithErr
 	}

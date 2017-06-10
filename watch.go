@@ -64,7 +64,9 @@ func template(w io.Writer) error {
 			"version",
 			"fetch",
 			"grep",
+			"ls-remote",
 			"ls-files",
+			"ls-tree",
 		},
 		Map: make(map[string]repoInfo),
 	}
