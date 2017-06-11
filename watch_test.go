@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
 
 // TODO: be graceful
+//     : fix filepath for windows
 
 var validSet = []struct {
 	outData []byte
@@ -72,6 +74,40 @@ func TestWatchList(t *testing.T) {
 			if out := wl.isAllow(test.firstArg); out != test.wantBool {
 				t.Errorf("t.Errorf [%d]:\n\texp:%+v\n\tout:%+v", i, out, test.wantBool)
 			}
+		}
+	})
+
+	t.Run("add to watch", func(t *testing.T) {
+		tempdir, err := ioutil.TempDir("", "gits_test_watchlist")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(tempdir)
+		key := filepath.Base(tempdir)
+		wl := &watchList{Map: make(map[string]repoInfo)}
+		// valid
+		if err := wl.watch(tempdir, key); err != nil {
+			t.Fatal(err)
+		}
+		// invalid if exists
+		if err := wl.watch("", key); err == nil {
+			t.Fatal("expected error but nil")
+		} else {
+			t.Logf("t.Logf err: %+v", err)
+		}
+	})
+
+	t.Run("remove in watch", func(t *testing.T) {
+		wl := &watchList{Map: map[string]repoInfo{"testrepo": {}}}
+		// valid
+		if err := wl.unwatch("testrepo"); err != nil {
+			t.Fatal(err)
+		}
+		// if not exists invalid
+		if err := wl.unwatch("testrepo"); err == nil {
+			t.Fatal("expected error but nil")
+		} else {
+			t.Logf("t.Logf err: %+v", err)
 		}
 	})
 }
@@ -185,6 +221,46 @@ func TestWriteWatchList(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestKeyAbs(t *testing.T) {
+	dir, err := ioutil.TempDir("", "gits_test_abs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(dir)
+	tests := []struct {
+		inputPath   string
+		expFullPath string
+		expKey      string
+		wanterr     bool
+	}{
+		/*{
+			inputPath: "need error is in os.Getwd",
+			wanterr: true,
+		},*/
+		{
+			inputPath:   dir,
+			wanterr:     false,
+			expFullPath: dir,
+			expKey:      filepath.Base(dir),
+		},
+	}
+	for i, test := range tests {
+		outf, outk, err := keyAbs(test.inputPath)
+		if test.wanterr && err == nil {
+			t.Fatalf("[%d]: expected error but nil", i)
+		}
+		if !test.wanterr && err != nil {
+			t.Fatalf("[%d]: %+v", i, err)
+		}
+		if outf != test.expFullPath {
+			t.Errorf("[%d]:\n\texp:%+v\n\tout:%+v", i, test.expFullPath, outf)
+		}
+		if outk != test.expKey {
+			t.Errorf("[%d]:\n\texp:%+v\n\tout:%+v", i, test.expKey, outk)
+		}
+	}
 }
 
 func TestTemplate(t *testing.T) {

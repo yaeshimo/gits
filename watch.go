@@ -34,8 +34,6 @@ func (wl *watchList) isAllow(firstArg string) bool {
 	return false
 }
 
-// TODO: test
-// stringer
 func (wl *watchList) String() string {
 	var str string
 	if wl.Restriction == nil || len(wl.Restriction) == 0 {
@@ -50,8 +48,6 @@ func (wl *watchList) String() string {
 	return str
 }
 
-// TODO: test
-// add
 func (wl *watchList) watch(fullpath string, key string) error {
 	if _, ok := wl.Map[key]; ok {
 		return fmt.Errorf("[%s] is exists", key)
@@ -63,8 +59,6 @@ func (wl *watchList) watch(fullpath string, key string) error {
 	return nil
 }
 
-// TODO: test
-// delete
 func (wl *watchList) unwatch(key string) error {
 	if _, ok := wl.Map[key]; !ok {
 		return fmt.Errorf("[%s] is not exists", key)
@@ -73,7 +67,7 @@ func (wl *watchList) unwatch(key string) error {
 	return nil
 }
 
-// TODO: implementation backup
+// TODO: implementation backup?
 func (wl *watchList) writeFile(file string) error {
 	b, err := json.MarshalIndent(wl, "", "  ")
 	if err != nil {
@@ -109,6 +103,7 @@ func readWatchList(fpath string) (*watchList, error) {
 
 // for watch, unwatch
 // first: Abs path, second: base key
+// TODO: add test for error in filepath.Abs
 func keyAbs(path string) (fullpath string, key string, err error) {
 	fullpath, err = filepath.Abs(path)
 	if err != nil {

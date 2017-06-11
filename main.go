@@ -25,12 +25,10 @@ type option struct {
 	version  bool
 	template bool
 	list     bool
+
 	// TODO: consider add flags
-	// watch string // add current git repository to watchlist.json
-	// unwatch string // remove current git repository on watchlist.json
 	// logfile string // specify output logfile
 
-	// TODO: impl watch unwatch
 	watch   string /// add watch to conf
 	unwatch string /// delte watch to conf
 
