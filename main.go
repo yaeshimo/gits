@@ -69,7 +69,7 @@ func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 		wg.Add(1)
 		go func(key string) {
 			defer wg.Done()
-			premsg := fmt.Sprintf("\n%s:\n", key)
+			premsg := fmt.Sprintf("\n[%s]\n", key)
 			if err := git.run(premsg, argsWithRepo); err != nil {
 				mux.Lock()
 				errs = append(errs, fmt.Errorf("[%s]:%+v", key, err))
