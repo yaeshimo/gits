@@ -131,9 +131,9 @@ func template(w io.Writer) error {
 		Gitdir:  "/path/to/repo/.git",
 		Workdir: "/path/to/repo",
 	}
-	watch.Map["template"] = repoInfo{
-		Gitdir:  "",
-		Workdir: "",
+	watch.Map["repo2"] = repoInfo{
+		Gitdir:  "/another/repo2/.git",
+		Workdir: "/another/repo2",
 	}
 	b, err := json.MarshalIndent(watch, "", "  ")
 	if err != nil {

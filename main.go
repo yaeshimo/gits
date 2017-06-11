@@ -22,9 +22,10 @@ const (
 )
 
 type option struct {
-	version  bool
-	template bool
-	list     bool
+	version      bool
+	template     bool
+	list         bool
+	showConfPath bool
 
 	// TODO: consider add flags
 	// logfile string // specify output logfile
@@ -89,16 +90,22 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	// one shot
 	flags.BoolVar(&opt.version, "version", false, "")
 	flags.BoolVar(&opt.template, "template", false, "output template json")
-	flags.BoolVar(&opt.list, "list", false, "list accept git commands")
+	flags.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
+	flags.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
 
-	flags.StringVar(&opt.watch, "watch", "", "add watch repository to conf")
-	flags.StringVar(&opt.unwatch, "unwatch", "", "remove watch repository in conf")
+	flags.StringVar(&opt.watch, "watch", "", "add watching repository to conf")
+	flags.StringVar(&opt.unwatch, "unwatch", "", "remove watching repository in conf")
 
 	// setting
 	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
 	flags.StringVar(&opt.conf, "conf", defConfPath, "path to json format watchlist")
-	flags.DurationVar(&opt.timeout, "timeout", time.Hour*12, "set timeout for running git")
+	flags.DurationVar(&opt.timeout, "timeout", time.Minute*30, "set timeout for running git")
 	flags.Parse(args[1:])
+
+	if opt.showConfPath {
+		fmt.Fprintln(w, defConfPath)
+		return validExit
+	}
 
 	wl := &watchList{}
 	var err error
