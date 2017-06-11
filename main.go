@@ -97,7 +97,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	flags.StringVar(&opt.unwatch, "unwatch", "", "remove watch repository in conf")
 
 	// setting
-	flags.StringVar(&opt.git, "git", "git", "name of git command or fullpath")
+	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
 	flags.StringVar(&opt.conf, "conf", defConfPath, "path to json format watchlist")
 	flags.DurationVar(&opt.timeout, "timeout", time.Hour*12, "set timeout for running git")
 	flags.Parse(args[1:])
