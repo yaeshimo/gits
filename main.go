@@ -138,7 +138,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			if err := wl.writeWatchList(opt.conf); err != nil {
+			if err := wl.writeFile(opt.conf); err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
@@ -155,7 +155,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			if err := wl.writeWatchList(opt.conf); err != nil {
+			if err := wl.writeFile(opt.conf); err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}

@@ -140,11 +140,28 @@ func TestWriteWatchList(t *testing.T) {
 	defer os.Remove(f.Name())
 
 	t.Run("invalid filepath", func(t *testing.T) {
-		if err := writeWatchList(&watchList{}, ""); err == nil {
+		wl := &watchList{}
+
+		// case ""
+		if err := wl.writeFile(""); err == nil {
 			t.Fatal("expected error but nil")
 		} else {
 			t.Logf("t.Logf err: %+v", err)
 		}
+
+		// case "directory"
+		dir, err := ioutil.TempDir("", "gits_test_tempdir")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(dir)
+		if err := wl.writeFile(dir); err == nil {
+			t.Fatal("expected error but nil")
+		} else {
+			t.Logf("t.Logf err: %+v", err)
+		}
+
+		// TODO: case "not regular"
 	})
 
 	t.Run("check writed content", func(t *testing.T) {
@@ -153,7 +170,7 @@ func TestWriteWatchList(t *testing.T) {
 			if err := f.Truncate(0); err != nil {
 				t.Fatal(err)
 			}
-			if err := writeWatchList(test.wl, f.Name()); err != nil {
+			if err := test.wl.writeFile(f.Name()); err != nil {
 				t.Errorf("t.Errorf [%d]: %+v", i, err)
 				continue
 			}
