@@ -31,7 +31,6 @@ type option struct {
 	// TODO: add flags?
 	// logfile string // specify output logfile
 	// execute string // -e [command]
-	// category string // -c [name of watchlist]
 
 	watch   string /// add watch to conf
 	unwatch string /// delte watch to conf
@@ -44,7 +43,6 @@ type option struct {
 
 // repository walker
 // use: git --git-dir=/path/to/work/.git --work-tree=/path/to/work
-//    : consider RWMutex write buffer?
 func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	// work on current directory
 	// need it?
@@ -64,12 +62,10 @@ func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	)
 
 	for key, repoInfo := range wl.Map {
-		argsWithRepo := append(
-			[]string{
-				"--git-dir=" + repoInfo.Gitdir,
-				"--work-tree=" + repoInfo.Workdir},
-			args...,
-		)
+		argsWithRepo := append([]string{
+			"--git-dir=" + repoInfo.Gitdir,
+			"--work-tree=" + repoInfo.Workdir},
+			args...)
 		wg.Add(1)
 		go func(key string) {
 			defer wg.Done()
@@ -85,7 +81,6 @@ func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	return errs
 }
 
-// TODO: be graceful
 func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	opt := option{}
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
@@ -125,7 +120,6 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		}
 	}
 
-	// be graceful
 	if flags.NArg() == 0 {
 		switch {
 		case opt.version:
@@ -186,7 +180,8 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	}
 
 	if !wl.isAllow(flags.Arg(0)) {
-		fmt.Fprintf(errw, "invalid argument: %+v\n", flags.Args())
+		fmt.Fprintf(errw, "Configuration file path:\n\t[%s]\n%s\n", opt.conf, wl)
+		fmt.Fprintf(errw, "This argument is not allowd: %+v\n", flags.Args())
 		return exitWithErr
 	}
 
