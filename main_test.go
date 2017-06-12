@@ -11,8 +11,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	_, err := exec.LookPath("git")
-	if err != nil {
+	if _, err := exec.LookPath("git"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, "test is stopped")
 		os.Exit(2)
@@ -22,7 +21,6 @@ func TestMain(m *testing.M) {
 }
 
 // TODO: be graceful
-//     : fix for windows
 func TestRun(t *testing.T) {
 	gitdir, err := ioutil.TempDir("", "gits_gitdir")
 	if err != nil {
@@ -47,7 +45,6 @@ func TestRun(t *testing.T) {
     }
   }
 }`)
-
 	vanishedFilePath, err := ioutil.TempDir("", "gits_test_vanished")
 	if err != nil {
 		t.Fatal(err)
@@ -158,7 +155,7 @@ func TestRun(t *testing.T) {
 		testRun(t, tests)
 	})
 
-	t.Run("flag watch", func(t *testing.T) {
+	t.Run("watch", func(t *testing.T) {
 		if err := conf.Truncate(0); err != nil {
 			t.Fatal(err)
 		}
@@ -193,13 +190,14 @@ func TestRun(t *testing.T) {
 		testRun(t, tests)
 	})
 
-	t.Run("flag unwatch", func(t *testing.T) {
+	t.Run("unwatch", func(t *testing.T) {
 		if err := conf.Truncate(0); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := conf.WriteAt(defaultContent, 0); err != nil {
 			t.Fatal(err)
 		}
+
 		prefix := []string{"gits", "-conf", conf.Name()}
 		dir, err := ioutil.TempDir("", "gits_test")
 		if err != nil {
