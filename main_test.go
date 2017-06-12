@@ -224,4 +224,21 @@ func TestRun(t *testing.T) {
 		}
 		testRun(t, tests)
 	})
+
+	t.Run("workdir", func(t *testing.T) {
+		if err := conf.Truncate(0); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := conf.WriteAt(defaultContent, 0); err != nil {
+			t.Fatal(err)
+		}
+
+		tests := []testData{
+			{
+				args: []string{"gits", "-workdir", "", "-conf", conf.Name()},
+				wanterr: true,
+			},
+		}
+		testRun(t, tests)
+	})
 }

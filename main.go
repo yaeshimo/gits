@@ -1,7 +1,8 @@
 // git wrapper
 // Quick Usage:
 //   `gits -template > watchlist.json`
-// edit gits.json, add your repository
+// edit gits.json, append your repository
+// after append
 //   `gits -conf=watchlist.json status`
 package main
 
@@ -27,14 +28,17 @@ type option struct {
 	list         bool
 	showConfPath bool
 
-	// TODO: consider add flags
+	// TODO: add flags?
 	// logfile string // specify output logfile
+	// execute string // -e [command]
+	// category string // -c [name of watchlist]
 
 	watch   string /// add watch to conf
 	unwatch string /// delte watch to conf
 
 	git     string
 	conf    string
+	workdir string
 	timeout time.Duration
 }
 
@@ -43,6 +47,7 @@ type option struct {
 //    : consider RWMutex write buffer?
 func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	// work on current directory
+	// need it?
 	if wl.Map == nil || len(wl.Map) == 0 {
 		msg := fmt.Sprintf("not found git repositories:\n\twork on current directory\n")
 		git.WriteErrString(msg)
@@ -92,23 +97,27 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	flags.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
 	flags.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
 
+	// modify conf
 	flags.StringVar(&opt.watch, "watch", "", "add watching repository to conf")
 	flags.StringVar(&opt.unwatch, "unwatch", "", "remove watching repository in conf")
 
 	// setting
 	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
 	flags.StringVar(&opt.conf, "conf", defConfPath, "path to json format watchlist")
+	flags.StringVar(&opt.workdir, "workdir", defWorkDir, "specify working directory")
 	flags.DurationVar(&opt.timeout, "timeout", time.Minute*30, "set timeout for running git")
 	flags.Parse(args[1:])
 
-	if opt.showConfPath {
-		fmt.Fprintln(w, defConfPath)
-		return validExit
+	if opt.workdir != defWorkDir {
+		if err := os.Chdir(opt.workdir); err != nil {
+			fmt.Fprintln(errw, err)
+			return exitWithErr
+		}
 	}
 
 	wl := &watchList{Map: make(map[string]repoInfo)}
-	var err error
 	if opt.conf != "" {
+		var err error
 		wl, err = readWatchList(opt.conf)
 		if err != nil {
 			fmt.Fprintln(errw, err)
@@ -121,6 +130,9 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		switch {
 		case opt.version:
 			fmt.Fprintf(w, "version %s\n", version)
+			return validExit
+		case opt.showConfPath:
+			fmt.Fprintln(w, defConfPath)
 			return validExit
 		case opt.template:
 			if err := template(w); err != nil {
