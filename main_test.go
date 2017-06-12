@@ -41,12 +41,19 @@ func TestRun(t *testing.T) {
     "status"
   ],
   "repository":{
-    "test_repository": {
+    "` + filepath.Base(gitdir) + `": {
       "gitdir": "` + filepath.Join(gitdir, ".git") + `",
       "workdir": "` + gitdir + `"
     }
   }
 }`)
+
+	vanishedFilePath, err := ioutil.TempDir("", "gits_test_vanished")
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Remove(vanishedFilePath)
+
 	type testData struct {
 		args    []string
 		wanterr bool
@@ -75,20 +82,14 @@ func TestRun(t *testing.T) {
 		}
 	}
 
-	t.Run("not modify conf", func(t *testing.T) {
+	// TODO: split with flags
+	t.Run("main run TODO: fix to oneshot", func(t *testing.T) {
 		if err := conf.Truncate(0); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := conf.WriteAt(defaultContent, 0); err != nil {
 			t.Fatal(err)
 		}
-
-		// for error check, -conf=vanishedFilePath
-		vanishedFilePath, err := ioutil.TempDir("", "gits_vanished_file_path")
-		if err != nil {
-			t.Fatal(err)
-		}
-		os.Remove(vanishedFilePath)
 
 		tests := []testData{
 			// valid args
@@ -108,6 +109,10 @@ func TestRun(t *testing.T) {
 				args:    []string{"gits", "version"},
 				wanterr: false,
 			},
+			{
+				args:    []string{"gits", "--conf-path"},
+				wanterr: false,
+			},
 			// invalid args
 			{
 				args:    []string{"gits"},
@@ -125,6 +130,8 @@ func TestRun(t *testing.T) {
 				args:    []string{"gits", "not implementation"},
 				wanterr: true,
 			},
+
+			/// TODO: split with conf
 			// conf valid
 			{
 				args:    []string{"gits", "-conf", conf.Name(), "version"},
@@ -151,7 +158,42 @@ func TestRun(t *testing.T) {
 		testRun(t, tests)
 	})
 
-	t.Run("modify conf", func(t *testing.T) {
+	t.Run("flag watch", func(t *testing.T) {
+		if err := conf.Truncate(0); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := conf.WriteAt(defaultContent, 0); err != nil {
+			t.Fatal(err)
+		}
+
+		prefix := []string{"gits", "-conf", conf.Name()}
+		dir, err := ioutil.TempDir("", "gits_test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(dir)
+		tests := []testData{
+			{
+				args:    []string{"gits", "-conf", "", "-watch", dir},
+				wanterr: true,
+			},
+			{
+				args:    []string{"gits", "-conf", dir, "-watch", "path"},
+				wanterr: true,
+			},
+			{
+				args:    append(prefix, "-watch", dir),
+				wanterr: false, // writed physical file
+			},
+			{
+				args:    append(prefix, "-watch", dir),
+				wanterr: true, // already watched
+			},
+		}
+		testRun(t, tests)
+	})
+
+	t.Run("flag unwatch", func(t *testing.T) {
 		if err := conf.Truncate(0); err != nil {
 			t.Fatal(err)
 		}
@@ -166,20 +208,20 @@ func TestRun(t *testing.T) {
 		defer os.Remove(dir)
 		tests := []testData{
 			{
-				args:    append(prefix, "-watch", dir),
-				wanterr: false,
+				args:    []string{"gits", "-conf", "", "-unwatch", gitdir},
+				wanterr: true,
 			},
 			{
-				args:    append(prefix, "-watch", dir),
-				wanterr: true, // already watched
-			},
-			{
-				args:    append(prefix, "-unwatch", dir),
-				wanterr: false,
+				args:    []string{"gits", "-conf", dir, "-unwatch", gitdir},
+				wanterr: true,
 			},
 			{
 				args:    append(prefix, "-unwatch", dir),
 				wanterr: true, // already is not watched
+			},
+			{
+				args:    append(prefix, "-unwatch", gitdir),
+				wanterr: false, // writed physical file
 			},
 		}
 		testRun(t, tests)

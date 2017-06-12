@@ -43,8 +43,7 @@ type option struct {
 //    : consider RWMutex write buffer?
 func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	// work on current directory
-	// TODO: really need?
-	if wl.Map == nil {
+	if wl.Map == nil || len(wl.Map) == 0 {
 		msg := fmt.Sprintf("not found git repositories:\n\twork on current directory\n")
 		git.WriteErrString(msg)
 		if err := git.run("", args); err != nil {
@@ -107,7 +106,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		return validExit
 	}
 
-	wl := &watchList{}
+	wl := &watchList{Map: make(map[string]repoInfo)}
 	var err error
 	if opt.conf != "" {
 		wl, err = readWatchList(opt.conf)
@@ -161,6 +160,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 				return exitWithErr
 			}
 			if err := wl.writeFile(opt.conf); err != nil {
+				// maybe unraechable
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}

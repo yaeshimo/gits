@@ -94,7 +94,7 @@ func readWatchList(fpath string) (*watchList, error) {
 	if err != nil {
 		return nil, err
 	}
-	wl := &watchList{}
+	wl := &watchList{Map:make(map[string]repoInfo)}
 	if err := json.Unmarshal(b, wl); err != nil {
 		return nil, err
 	}
@@ -103,7 +103,6 @@ func readWatchList(fpath string) (*watchList, error) {
 
 // for watch, unwatch
 // first: Abs path, second: base key
-// TODO: add test for error in filepath.Abs
 func keyAbs(path string) (fullpath string, key string, err error) {
 	fullpath, err = filepath.Abs(path)
 	if err != nil {
