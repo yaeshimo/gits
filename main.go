@@ -88,7 +88,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 
 	// one shot
 	flags.BoolVar(&opt.version, "version", false, "")
-	flags.BoolVar(&opt.template, "template", false, "output template json")
+	flags.BoolVar(&opt.template, "template", false, "output the template of watchlist")
 	flags.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
 	flags.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
 
