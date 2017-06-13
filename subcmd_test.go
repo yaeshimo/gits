@@ -48,7 +48,9 @@ func BenchmarkSubcmd(b *testing.B) {
 		errbuf := bytes.NewBufferString(errs)
 		git := newSubcmd(buf, errbuf, nil, "git", time.Hour)
 		args := []string{"version"}
+
 		wg := new(sync.WaitGroup)
+		once := new(sync.Once)
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -56,7 +58,7 @@ func BenchmarkSubcmd(b *testing.B) {
 			go func(i int) {
 				defer wg.Done()
 				if err := git.run(fmt.Sprintln(i), args); err != nil {
-					b.Fatal(err)
+					once.Do(func() { b.Fatal(err) })
 				}
 			}(i)
 		}
