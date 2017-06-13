@@ -94,7 +94,7 @@ func readWatchList(fpath string) (*watchList, error) {
 	if err != nil {
 		return nil, err
 	}
-	wl := &watchList{Map:make(map[string]repoInfo)}
+	wl := &watchList{Map: make(map[string]repoInfo)}
 	if err := json.Unmarshal(b, wl); err != nil {
 		return nil, err
 	}
