@@ -16,7 +16,8 @@ func TestMain(m *testing.M) {
 		fmt.Fprintln(os.Stderr, "test is stopped")
 		os.Exit(2)
 	}
-	defConfPath = ""
+	defConfName = ""
+	defConfDir = ""
 	os.Exit(m.Run())
 }
 
@@ -70,7 +71,7 @@ func TestRun(t *testing.T) {
 				if test.wanterr {
 					t.Logf("t.Logf [%d] passed error: %+v", i, errbuf)
 				} else {
-					t.Errorf("t.Errorf [%d] err: %+v", i, errbuf)
+					t.Errorf("t.Errorf [%d] want error but passed: errbuf:%+v", i, errbuf)
 				}
 			}
 			t.Logf("t.Logf [%d] outbuf: %+v", i, buf)
@@ -128,7 +129,7 @@ func TestRun(t *testing.T) {
 				wanterr: true,
 			},
 
-			/// TODO: split with conf
+			/// TODO: split for conf
 			// conf valid
 			{
 				args:    []string{"gits", "-conf", conf.Name(), "version"},
@@ -225,7 +226,7 @@ func TestRun(t *testing.T) {
 		testRun(t, tests)
 	})
 
-	t.Run("workdir", func(t *testing.T) {
+	t.Run("conf dir", func(t *testing.T) {
 		if err := conf.Truncate(0); err != nil {
 			t.Fatal(err)
 		}
@@ -234,10 +235,7 @@ func TestRun(t *testing.T) {
 		}
 
 		tests := []testData{
-			{
-				args: []string{"gits", "-workdir", "", "-conf", conf.Name()},
-				wanterr: true,
-			},
+		// TODO: add case
 		}
 		testRun(t, tests)
 	})

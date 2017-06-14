@@ -36,10 +36,33 @@ gits -conf /path/to/your/watchlist.json -list
 ```
 
 5. **Conf Path**  
+  if you have one, default configuration directory is setting  
+
+  output candidate directories `gits --candidate-dirs`
+  - on linux
+```
+high-priority
+$HOME/gits
+$HOME/.config/gits
+low-priority
+```
+
+  - on windows
+```
+high-priority
+%USERPROFILE%\config\gits
+%USERPROFILE%\AppData\Local\gits
+low-priority
+```
+
   if you use default conf path, you can trim conf flag  
-  show default conf path  
+  - output default conf path  
 ```sh
 gits --show-conf
+```
+or
+```sh
+gits --help
 ```
 
 

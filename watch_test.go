@@ -197,7 +197,7 @@ func TestWriteWatchList(t *testing.T) {
 			t.Logf("t.Logf err: %+v", err)
 		}
 
-		// TODO: case "not regular"
+		// TODO: add case "not regular"
 	})
 
 	t.Run("check writed content", func(t *testing.T) {

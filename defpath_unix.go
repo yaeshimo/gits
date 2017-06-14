@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 )
 
-var defConfPath = ""
-var defWorkDir = ""
+var defConfName = "watchlist.json"
+var defConfDirList = []string{}
+var defConfDir = ""
 
 func init() {
 	u, err := user.Current()
@@ -20,9 +21,15 @@ func init() {
 		// unreachable?
 		return
 	}
-	defWorkDir = filepath.Join(u.HomeDir, ".config", "gits")
-	if err := os.Chdir(defWorkDir); err != nil {
-		defWorkDir = ""
+
+	defConfDirList = []string{
+		filepath.Join(u.HomeDir, "gits"),
+		filepath.Join(u.HomeDir, ".config", "gits"),
 	}
-	defConfPath = filepath.Join(defWorkDir, "watchlist.json")
+	for _, dir := range defConfDirList {
+		if f, err := os.Stat(dir); err == nil && f.IsDir() {
+			defConfDir = dir
+			break
+		}
+	}
 }

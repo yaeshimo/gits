@@ -1,9 +1,9 @@
 // git wrapper
 // Quick Usage:
-//   `gits -template > watchlist.json`
+//   `gits -template > /path/a/watchlist.json`
 // edit gits.json, append your repository
 // after append
-//   `gits -conf=watchlist.json status`
+//   `gits -conf-dir=/path/a -conf=watchlist.json status`
 package main
 
 import (
@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -27,6 +29,7 @@ type option struct {
 	template     bool
 	list         bool
 	showConfPath bool
+	showConfDirs bool
 
 	// TODO: add flags?
 	// logfile string // specify output logfile
@@ -37,7 +40,7 @@ type option struct {
 
 	git     string
 	conf    string
-	workdir string
+	confdir string
 	timeout time.Duration
 }
 
@@ -81,6 +84,7 @@ func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	return errs
 }
 
+// TODO: split for flags
 func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	opt := option{}
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
@@ -91,6 +95,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	flags.BoolVar(&opt.template, "template", false, "output the template of watchlist")
 	flags.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
 	flags.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
+	flags.BoolVar(&opt.showConfDirs, "candidate-dirs", false, "show candidate conf directories")
 
 	// modify conf
 	flags.StringVar(&opt.watch, "watch", "", "add watching repository to conf")
@@ -98,22 +103,24 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 
 	// setting
 	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
-	flags.StringVar(&opt.conf, "conf", defConfPath, "path to json format watchlist")
-	flags.StringVar(&opt.workdir, "workdir", defWorkDir, "specify working directory")
+	flags.StringVar(&opt.conf, "conf", defConfName, "accept base name or full path, to json format watchlist")
+	flags.StringVar(&opt.confdir, "conf-dir", defConfDir, "specify conf directory")
 	flags.DurationVar(&opt.timeout, "timeout", time.Minute*30, "set timeout for running git")
 	flags.Parse(args[1:])
 
-	if opt.workdir != defWorkDir {
-		if err := os.Chdir(opt.workdir); err != nil {
-			fmt.Fprintln(errw, err)
-			return exitWithErr
+	var confpath string
+	if opt.conf != "" {
+		if filepath.IsAbs(opt.conf) {
+			confpath = opt.conf
+		} else {
+			confpath = filepath.Join(opt.confdir, filepath.Base(opt.conf))
 		}
 	}
 
 	wl := &watchList{Map: make(map[string]repoInfo)}
-	if opt.conf != "" {
+	if confpath != "" {
 		var err error
-		wl, err = readWatchList(opt.conf)
+		wl, err = readWatchList(confpath)
 		if err != nil {
 			fmt.Fprintln(errw, err)
 			return exitWithErr
@@ -126,7 +133,10 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			fmt.Fprintf(w, "version %s\n", version)
 			return validExit
 		case opt.showConfPath:
-			fmt.Fprintln(w, defConfPath)
+			fmt.Fprintln(w, confpath)
+			return validExit
+		case opt.showConfDirs:
+			fmt.Fprintln(w, strings.Join(defConfDirList, "\n"))
 			return validExit
 		case opt.template:
 			if err := template(w); err != nil {
@@ -136,7 +146,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			}
 			return validExit
 		case opt.list:
-			fmt.Fprintf(w, "conf:[%s]\n%s\n", opt.conf, wl)
+			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wl)
 			return validExit
 		case opt.watch != "":
 			fullpath, key, err := keyAbs(opt.watch)
@@ -148,12 +158,12 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			if err := wl.writeFile(opt.conf); err != nil {
+			if err := wl.writeFile(confpath); err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			fmt.Fprintf(w, "conf:[%s]\n%s\n", opt.conf, wl)
-			fmt.Fprintf(w, "appended [%s] in [%s]\n", key, opt.conf)
+			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wl)
+			fmt.Fprintf(w, "appended [%s] in [%s]\n", key, confpath)
 			return validExit
 		case opt.unwatch != "":
 			_, key, err := keyAbs(opt.unwatch)
@@ -165,13 +175,13 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			if err := wl.writeFile(opt.conf); err != nil {
+			if err := wl.writeFile(confpath); err != nil {
 				// maybe unraechable
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			fmt.Fprintf(w, "conf:[%s]\n%s\n", opt.conf, wl)
-			fmt.Fprintf(w, "removed [%s] in [%s]\n", key, opt.conf)
+			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wl)
+			fmt.Fprintf(w, "removed [%s] in [%s]\n", key, confpath)
 			return validExit
 		default:
 			flags.Usage()
@@ -180,7 +190,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	}
 
 	if !wl.isAllow(flags.Arg(0)) {
-		fmt.Fprintf(errw, "Configuration file path:\n\t[%s]\n%s\n", opt.conf, wl)
+		fmt.Fprintf(errw, "Configuration file path:\n\t[%s]\n%s\n", confpath, wl)
 		fmt.Fprintf(errw, "This argument is not allowd: %+v\n", flags.Args())
 		return exitWithErr
 	}
