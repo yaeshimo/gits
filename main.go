@@ -39,6 +39,7 @@ type option struct {
 	unwatch string /// delte watch to conf
 
 	git     string
+	key     string
 	conf    string
 	confdir string
 	timeout time.Duration
@@ -103,6 +104,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 
 	// setting
 	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
+	flags.StringVar(&opt.key, "key", "", "specify target repository")
 	flags.StringVar(&opt.conf, "conf", defConfName, "accept base name or full path, to json format watchlist")
 	flags.StringVar(&opt.confdir, "conf-dir", defConfDir, "specify conf directory")
 	flags.DurationVar(&opt.timeout, "timeout", time.Minute*30, "set timeout for running git")
@@ -125,6 +127,15 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			fmt.Fprintln(errw, err)
 			return exitWithErr
 		}
+	}
+
+	if opt.key != "" {
+		info, ok := wl.Map[opt.key]
+		if !ok {
+			fmt.Fprintf(errw, "not found [%s] in repository map", opt.key)
+			return exitWithErr
+		}
+		wl.Map = map[string]repoInfo{opt.key: info}
 	}
 
 	if flags.NArg() == 0 {
