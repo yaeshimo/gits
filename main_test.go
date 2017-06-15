@@ -21,7 +21,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// TODO: be graceful
 func TestRun(t *testing.T) {
 	gitdir, err := ioutil.TempDir("", "gits_gitdir")
 	if err != nil {
@@ -80,8 +79,7 @@ func TestRun(t *testing.T) {
 		}
 	}
 
-	// TODO: split with flags
-	t.Run("main run TODO: fix to oneshot", func(t *testing.T) {
+	t.Run("main run", func(t *testing.T) {
 		if err := conf.Truncate(0); err != nil {
 			t.Fatal(err)
 		}
@@ -129,7 +127,6 @@ func TestRun(t *testing.T) {
 				wanterr: true,
 			},
 
-			/// TODO: split for conf
 			// conf valid
 			{
 				args:    []string{"gits", "-conf", conf.Name(), "version"},

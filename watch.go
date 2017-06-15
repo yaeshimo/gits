@@ -67,7 +67,6 @@ func (wl *watchList) unwatch(key string) error {
 	return nil
 }
 
-// TODO: implementation backup?
 func (wl *watchList) writeFile(file string) error {
 	b, err := json.MarshalIndent(wl, "", "  ")
 	if err != nil {

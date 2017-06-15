@@ -9,7 +9,6 @@ import (
 	"testing"
 )
 
-// TODO: be graceful
 //     : fix filepath for windows
 
 var validSet = []struct {
