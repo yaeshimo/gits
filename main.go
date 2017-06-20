@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,11 +26,15 @@ const (
 )
 
 type option struct {
-	version      bool
-	template     bool
-	list         bool
+	version  bool
+	template bool
+	list     bool
+
 	showConfPath bool
 	showConfDirs bool
+	showConfList bool
+
+	confNew string
 
 	// TODO: add flags?
 	// logfile string // specify output logfile
@@ -85,6 +90,8 @@ func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	return errs
 }
 
+// TODO: split file for configuration file path?
+
 func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	opt := option{}
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
@@ -94,8 +101,12 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	flags.BoolVar(&opt.version, "version", false, "")
 	flags.BoolVar(&opt.template, "template", false, "output the template of watchlist")
 	flags.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
+
 	flags.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
 	flags.BoolVar(&opt.showConfDirs, "candidate-dirs", false, "show candidate conf directories")
+	flags.BoolVar(&opt.showConfList, "conf-list", false, "show configuration set list")
+
+	flags.StringVar(&opt.confNew, "conf-new", "", "generate new configuration file to conf directory")
 
 	// modify conf
 	flags.StringVar(&opt.watch, "watch", "", "add watching repository to conf")
@@ -148,6 +159,47 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		case opt.showConfDirs:
 			fmt.Fprintln(w, strings.Join(defConfDirList, "\n"))
 			return validExit
+
+		// TODO: split to function
+		case opt.showConfList:
+			infos, err := ioutil.ReadDir(defConfDir)
+			if err != nil {
+				fmt.Fprintln(errw, err)
+				return exitWithErr
+			}
+			s := ""
+			for _, info := range infos {
+				if info.Mode().IsRegular() {
+					s += fmt.Sprintln(info.Name())
+				}
+			}
+			fmt.Fprintln(w, s)
+			return validExit
+
+		// TODO: split to function
+		case opt.confNew != "":
+			mkpath := filepath.Join(defConfDir, filepath.Base(opt.confNew))
+			if _, err := os.Stat(mkpath); err == nil {
+				fmt.Fprintln(errw, mkpath+" is exist")
+				return exitWithErr
+			} else if os.IsNotExist(err) {
+				f, err := os.Create(mkpath)
+				if err != nil {
+					fmt.Fprintln(errw, err)
+					return exitWithErr
+				}
+				defer f.Close()
+				if err := template(f); err != nil {
+					fmt.Fprintln(errw, err)
+					return exitWithErr
+				}
+				fmt.Fprintln(w, "configuration file writed: "+mkpath)
+				return validExit
+			} else {
+				fmt.Fprintln(errw, err)
+				return exitWithErr
+			}
+
 		case opt.template:
 			if err := template(w); err != nil {
 				// unreachable?
@@ -158,6 +210,8 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		case opt.list:
 			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wl)
 			return validExit
+
+		// TODO: split to function
 		case opt.watch != "":
 			fullpath, key, err := keyAbs(opt.watch)
 			if err != nil {
@@ -175,6 +229,8 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wl)
 			fmt.Fprintf(w, "appended [%s] in [%s]\n", key, confpath)
 			return validExit
+
+		// TODO: split to function
 		case opt.unwatch != "":
 			_, key, err := keyAbs(opt.unwatch)
 			if err != nil {
@@ -193,6 +249,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wl)
 			fmt.Fprintf(w, "removed [%s] in [%s]\n", key, confpath)
 			return validExit
+
 		default:
 			flags.Usage()
 			return exitWithErr
