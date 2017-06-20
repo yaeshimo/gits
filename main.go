@@ -115,7 +115,10 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	// setting
 	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
 	flags.StringVar(&opt.key, "key", "", "specify target repository")
+
 	flags.StringVar(&opt.conf, "conf", defConfName, "accept base name or full path, to json format watchlist")
+	flags.StringVar(&opt.conf, "c", defConfName, "alias of [-conf]")
+
 	flags.StringVar(&opt.confdir, "conf-dir", defConfDir, "specify conf directory")
 	flags.DurationVar(&opt.timeout, "timeout", time.Minute*30, "set timeout for running git")
 	flags.Parse(args[1:])
