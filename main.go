@@ -33,14 +33,14 @@ type option struct {
 	showConfDirs bool
 	showConfList bool
 
-	confNew string
+	confNew string // create configuration file to confDir
 
 	// TODO: add flags?
 	// logfile string // specify output logfile
-	// execute string // -e [command]
+	// execute string // specify commands: -e [command]
 
 	watch   string /// add watch to conf
-	unwatch string /// delte watch to conf
+	unwatch string /// delte watch in conf
 
 	git     string
 	key     string
@@ -122,6 +122,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	flags.DurationVar(&opt.timeout, "timeout", time.Minute*30, "set timeout for running git")
 	flags.Parse(args[1:])
 
+	/// TODO: reconsider confs
 	var confpath string
 	if opt.conf != "" {
 		if filepath.IsAbs(opt.conf) {
@@ -130,7 +131,6 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			confpath = filepath.Join(opt.confdir, filepath.Base(opt.conf))
 		}
 	}
-
 	wc := newWatConf(confpath)
 	if confpath != "" {
 		var err error
@@ -140,7 +140,6 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			return exitWithErr
 		}
 	}
-
 	if opt.key != "" {
 		info, ok := wc.wl.Map[opt.key]
 		if !ok {
