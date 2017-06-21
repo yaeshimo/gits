@@ -67,19 +67,20 @@ func (wl *watchList) unwatch(key string) error {
 	return nil
 }
 
+// TODO: implemetation wirte backup
 func (wl *watchList) writeFile(file string) error {
 	b, err := json.MarshalIndent(wl, "", "  ")
 	if err != nil {
 		return err // unreachable?
 	}
-	if f, err := os.Stat(file); err == nil {
+	if info, err := os.Stat(file); err == nil {
 		switch {
-		case f.IsDir():
-			return fmt.Errorf("%s is directory", f.Name())
-		case f.Mode().IsRegular():
+		case info.IsDir():
+			return fmt.Errorf("%s is directory", info.Name())
+		case info.Mode().IsRegular():
 			// accept override
 		default:
-			return fmt.Errorf("%s is not regure file", f.Name())
+			return fmt.Errorf("%s is not regure file", info.Name())
 		}
 	}
 	if err := ioutil.WriteFile(file, b, 0666); err != nil {
@@ -100,15 +101,84 @@ func readWatchList(fpath string) (*watchList, error) {
 	return wl, nil
 }
 
+/// TODO: reconsider
+type watchConf struct {
+	wl   *watchList
+	path string
+}
+
+/// TODO: reconsider
+func newWatConf(path string) *watchConf {
+	return &watchConf{
+		wl:   &watchList{Map: make(map[string]repoInfo)},
+		path: path,
+	}
+}
+func (wc *watchConf) watch(repoPath string) (string, error) {
+	fullpath, key, err := absWithBase(repoPath)
+	if err != nil {
+		return "", err
+	}
+	if err := wc.wl.watch(fullpath, key); err != nil {
+		return "", err
+	}
+	if err := wc.wl.writeFile(wc.path); err != nil {
+		return "", err
+	}
+	return key, nil
+}
+func (wc *watchConf) unwatch(repoPath string) (string, error) {
+	_, key, err := absWithBase(repoPath)
+	if err != nil {
+		return "", err
+	}
+	if err := wc.wl.unwatch(key); err != nil {
+		return "", err
+	}
+	if err := wc.wl.writeFile(wc.path); err != nil {
+		return "", err
+	}
+	return key, nil
+}
+func (wc *watchConf) getConfList() ([]string, error) {
+	infos, err := ioutil.ReadDir(filepath.Dir(wc.path))
+	if err != nil {
+		return nil, err
+	}
+	var s []string
+	for _, info := range infos {
+		if info.Mode().IsRegular() {
+			s = append(s, info.Name())
+		}
+	}
+	return s, nil
+}
+func createConf(mkpath string) error {
+	if _, err := os.Stat(mkpath); err == nil {
+		return fmt.Errorf(mkpath + " is exist")
+	} else if os.IsNotExist(err) {
+		f, err := os.Create(mkpath)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if err := template(f); err != nil {
+			return err
+		}
+		return nil
+	} else {
+		return err
+	}
+}
+
 // for watch, unwatch
 // first: Abs path, second: base key
-func keyAbs(path string) (fullpath string, key string, err error) {
+func absWithBase(path string) (fullpath string, base string, err error) {
 	fullpath, err = filepath.Abs(path)
 	if err != nil {
 		return "", "", err
 	}
-	key = filepath.Base(fullpath)
-	return fullpath, key, nil
+	return fullpath, filepath.Base(fullpath), nil
 }
 
 // TODO: fix filepath for windows

@@ -10,7 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -132,10 +131,10 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		}
 	}
 
-	wl := &watchList{Map: make(map[string]repoInfo)}
+	wc := newWatConf(confpath)
 	if confpath != "" {
 		var err error
-		wl, err = readWatchList(confpath)
+		wc.wl, err = readWatchList(wc.path)
 		if err != nil {
 			fmt.Fprintln(errw, err)
 			return exitWithErr
@@ -143,12 +142,12 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	}
 
 	if opt.key != "" {
-		info, ok := wl.Map[opt.key]
+		info, ok := wc.wl.Map[opt.key]
 		if !ok {
 			fmt.Fprintf(errw, "not found [%s] in repository map", opt.key)
 			return exitWithErr
 		}
-		wl.Map = map[string]repoInfo{opt.key: info}
+		wc.wl.Map = map[string]repoInfo{opt.key: info}
 	}
 
 	if flags.NArg() == 0 {
@@ -162,111 +161,61 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		case opt.showConfDirs:
 			fmt.Fprintln(w, strings.Join(defConfDirList, "\n"))
 			return validExit
-
-		// TODO: split to function
 		case opt.showConfList:
-			infos, err := ioutil.ReadDir(defConfDir)
+			confList, err := wc.getConfList()
 			if err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			s := ""
-			for _, info := range infos {
-				if info.Mode().IsRegular() {
-					s += fmt.Sprintln(info.Name())
-				}
-			}
-			fmt.Fprintln(w, s)
+			fmt.Fprintln(w, strings.Join(confList, "\n"))
 			return validExit
-
-		// TODO: split to function
 		case opt.confNew != "":
 			mkpath := filepath.Join(defConfDir, filepath.Base(opt.confNew))
-			if _, err := os.Stat(mkpath); err == nil {
-				fmt.Fprintln(errw, mkpath+" is exist")
-				return exitWithErr
-			} else if os.IsNotExist(err) {
-				f, err := os.Create(mkpath)
-				if err != nil {
-					fmt.Fprintln(errw, err)
-					return exitWithErr
-				}
-				defer f.Close()
-				if err := template(f); err != nil {
-					fmt.Fprintln(errw, err)
-					return exitWithErr
-				}
-				fmt.Fprintln(w, "configuration file writed: "+mkpath)
-				return validExit
-			} else {
+			if err := createConf(mkpath); err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-
+			fmt.Fprintln(w, "configuration file was written: "+mkpath)
+			return validExit
 		case opt.template:
 			if err := template(w); err != nil {
-				// unreachable?
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
 			return validExit
 		case opt.list:
-			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wl)
+			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wc.wl)
 			return validExit
-
-		// TODO: split to function
 		case opt.watch != "":
-			fullpath, key, err := keyAbs(opt.watch)
+			key, err := wc.watch(opt.watch)
 			if err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			if err := wl.watch(fullpath, key); err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			if err := wl.writeFile(confpath); err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wl)
-			fmt.Fprintf(w, "appended [%s] in [%s]\n", key, confpath)
+			fmt.Fprintf(w, "conf:[%s]\n%s\nappended [%s]\n", wc.path, wc.wl, key)
 			return validExit
-
-		// TODO: split to function
 		case opt.unwatch != "":
-			_, key, err := keyAbs(opt.unwatch)
+			key, err := wc.unwatch(opt.unwatch)
 			if err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			if err := wl.unwatch(key); err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			if err := wl.writeFile(confpath); err != nil {
-				// maybe unraechable
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wl)
-			fmt.Fprintf(w, "removed [%s] in [%s]\n", key, confpath)
+			fmt.Fprintf(w, "conf:[%s]\n%s\nremoved [%s]\n", wc.path, wc.wl, key)
 			return validExit
-
 		default:
 			flags.Usage()
 			return exitWithErr
 		}
 	}
 
-	if !wl.isAllow(flags.Arg(0)) {
-		fmt.Fprintf(errw, "Configuration file path:\n\t[%s]\n%s\n", confpath, wl)
-		fmt.Fprintf(errw, "This argument is not allowd: %+v\n", flags.Args())
+	if !wc.wl.isAllow(flags.Arg(0)) {
+		fmt.Fprintf(errw, "Configuration file path:\n\t[%s]\n%s\n", confpath, wc.wl)
+		fmt.Fprintf(errw, "This argument is not allowed: %+v\n", flags.Args())
 		return exitWithErr
 	}
 
 	git := newSubcmd(w, errw, r, opt.git, opt.timeout)
-	if errs := gitWalker(git, wl, flags.Args()); errs != nil {
+	if errs := gitWalker(git, wc.wl, flags.Args()); errs != nil {
 		fmt.Fprintln(errw, "---------- found error ----------")
 		fmt.Fprintln(errw, errs)
 		return exitWithErr

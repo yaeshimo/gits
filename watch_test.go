@@ -246,7 +246,7 @@ func TestKeyAbs(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		outf, outk, err := keyAbs(test.inputPath)
+		outf, outk, err := absWithBase(test.inputPath)
 		if test.wanterr && err == nil {
 			t.Fatalf("[%d]: expected error but nil", i)
 		}
