@@ -16,8 +16,8 @@ func TestMain(m *testing.M) {
 		fmt.Fprintln(os.Stderr, "test is stopped")
 		os.Exit(2)
 	}
-	defConfName = ""
-	defConfDir = ""
+	DefConfName = ""
+	DefConfDir = ""
 	os.Exit(m.Run())
 }
 
