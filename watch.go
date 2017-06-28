@@ -108,7 +108,7 @@ type watchConf struct {
 }
 
 /// TODO: reconsider
-func newWatConf(path string) *watchConf {
+func newWatchConf(path string) *watchConf {
 	return &watchConf{
 		wl:   &watchList{Map: make(map[string]repoInfo)},
 		path: path,

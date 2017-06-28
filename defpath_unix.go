@@ -4,32 +4,34 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 )
 
-var defConfName = "watchlist.json"
-var defConfDirList = []string{}
-var defConfDir = ""
+var (
+	DefConfName = "watchlist.json"
+	DefConfDirList = []string{}
+	DefConfDir = ""
+	DefEditor = ""
+)
 
 func init() {
-	u, err := user.Current()
-	if err != nil {
-		return
+	if vim, err := exec.LookPath("vim"); err == nil {
+		DefEditor = vim
 	}
-	if u.HomeDir == "" {
-		// unreachable?
-		return
-	}
+	DefEditor = os.Getenv("EDITOR")
 
-	defConfDirList = []string{
-		filepath.Join(u.HomeDir, "gits"),
-		filepath.Join(u.HomeDir, ".config", "gits"),
-	}
-	for _, dir := range defConfDirList {
-		if f, err := os.Stat(dir); err == nil && f.IsDir() {
-			defConfDir = dir
-			break
+	if u, err := user.Current(); err == nil && u.HomeDir != "" {
+		DefConfDirList = []string{
+			filepath.Join(u.HomeDir, ".gits"),
+			filepath.Join(u.HomeDir, ".config", "gits"),
+		}
+		for _, dir := range DefConfDirList {
+			if f, err := os.Stat(dir); err == nil && f.IsDir() {
+				DefConfDir = dir
+				break
+			}
 		}
 	}
 }
