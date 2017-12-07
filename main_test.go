@@ -70,6 +70,7 @@ func TestRun(t *testing.T) {
 					t.Logf("t.Logf [%d] passed error: %+v", i, errbuf)
 				} else {
 					t.Errorf("t.Errorf [%d] want error but passed: errbuf:%+v", i, errbuf)
+					t.Errorf("t.Errorf [%d] args: %v", i, test.args)
 				}
 			}
 			t.Logf("t.Logf [%d] outbuf: %+v", i, buf)
