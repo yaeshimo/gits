@@ -1,6 +1,6 @@
 gits
 ====
-git wrapper
+management tool for git repositories
 
 
 Usage:
@@ -13,11 +13,10 @@ gits -template > /path/to/your/watchlist.json
 2. **Append your git repositories to watchlist**  
   edit watchlist.json yourself, append your repository info  
   or  
-  can use command  
+  use command  
 ```sh
 cd /your/git/repository
 gits -conf /path/to/your/watchlist.json -watch ./
-gits -conf /path/to/your/watchlist.json -list
 ```
 
 3. **After append**  
@@ -29,10 +28,10 @@ gits -conf /path/to/your/watchlist.json grep [word]
 ```
 
 4. **Unwatch**  
+  remove repository info
 ```sh
 cd /your/git/repository
 gits -conf /path/to/your/watchlist.json -unwatch ./
-gits -conf /path/to/your/watchlist.json -list
 ```
 
 5. **Conf Path**  
@@ -42,7 +41,7 @@ gits -conf /path/to/your/watchlist.json -list
   - on linux
 ```
 high-priority
-$HOME/gits
+$HOME/.gits
 $HOME/.config/gits
 low-priority
 ```
@@ -58,11 +57,7 @@ low-priority
   if you use default conf path, you can trim conf flag  
   - output default conf path  
 ```sh
-gits --show-conf
-```
-or
-```sh
-gits --help
+gits -conf-path
 ```
 
 
