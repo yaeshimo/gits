@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const version = "0.0.5"
+const version = "0.0.6"
 
 const (
 	validExit = iota
@@ -54,6 +54,40 @@ type option struct {
 	// modify conf
 	watch   string /// add watch to conf
 	unwatch string /// delte watch in conf
+}
+
+func (opt *option) init(errw io.Writer, args []string, ehandle flag.ErrorHandling) (*flag.FlagSet, error) {
+	// TODO: consider need case args == nil?
+	f := flag.NewFlagSet(args[0], ehandle)
+	f.SetOutput(errw)
+
+	// one shot
+	f.BoolVar(&opt.version, "version", false, "")
+	f.BoolVar(&opt.template, "template", false, "output the template of watchlist")
+	f.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
+	f.BoolVar(&opt.edit, "edit", false, "open conf on your editor(default:"+DefEditor+")")
+
+	// setting
+	f.StringVar(&opt.git, "git", "git", "command name of git or full path")
+	f.BoolVar(&opt.sync, "sync", false, "run on sync")
+	f.StringVar(&opt.match, "match", "", "specify target repositories")
+	f.StringVar(&opt.conf, "conf", DefConfName, "accept base name or full path, to json format watchlist")
+	f.StringVar(&opt.conf, "c", DefConfName, "alias of [-conf]")
+	f.StringVar(&opt.confdir, "conf-dir", DefConfDir, "specify conf directory")
+	f.DurationVar(&opt.timeout, "timeout", 0, "set timeout for running git, 0 means no limit")
+
+	// show contents of conf
+	f.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
+	f.BoolVar(&opt.showConfDirs, "candidate-dirs", false, "show candidate conf directories")
+	f.BoolVar(&opt.showConfList, "conf-list", false, "show configuration set list")
+
+	// new conf
+	f.StringVar(&opt.confNew, "conf-new", "", "generate new configuration file to conf directory")
+
+	// modify conf
+	f.StringVar(&opt.watch, "watch", "", "add watching repository to conf")
+	f.StringVar(&opt.unwatch, "unwatch", "", "remove watching repository in conf")
+	return f, f.Parse(args[1:])
 }
 
 // repository walker
@@ -125,38 +159,12 @@ func editConf(w, errw io.Writer, r io.Reader, editor, confpath string) error {
 }
 
 func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
-	opt := option{}
-	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
-	flags.SetOutput(errw)
-
-	// one shot
-	flags.BoolVar(&opt.version, "version", false, "")
-	flags.BoolVar(&opt.template, "template", false, "output the template of watchlist")
-	flags.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
-	flags.BoolVar(&opt.edit, "edit", false, "open conf on your editor(default:"+DefEditor+")")
-
-	// setting
-	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
-	flags.BoolVar(&opt.sync, "sync", false, "run on sync")
-	flags.StringVar(&opt.match, "match", "", "specify target repositories")
-	flags.StringVar(&opt.conf, "conf", DefConfName, "accept base name or full path, to json format watchlist")
-	flags.StringVar(&opt.conf, "c", DefConfName, "alias of [-conf]")
-	flags.StringVar(&opt.confdir, "conf-dir", DefConfDir, "specify conf directory")
-	flags.DurationVar(&opt.timeout, "timeout", 0, "set timeout for running git, 0 means no limit")
-
-	// show contents of conf
-	flags.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
-	flags.BoolVar(&opt.showConfDirs, "candidate-dirs", false, "show candidate conf directories")
-	flags.BoolVar(&opt.showConfList, "conf-list", false, "show configuration set list")
-
-	// new conf
-	flags.StringVar(&opt.confNew, "conf-new", "", "generate new configuration file to conf directory")
-
-	// modify conf
-	flags.StringVar(&opt.watch, "watch", "", "add watching repository to conf")
-	flags.StringVar(&opt.unwatch, "unwatch", "", "remove watching repository in conf")
-	flags.Parse(args[1:])
-
+	opt := &option{}
+	flags, err := opt.init(errw, args, flag.ExitOnError)
+	if err != nil {
+		fmt.Fprintln(errw, err)
+		return exitWithErr
+	}
 	var confpath string
 	if opt.conf != "" {
 		if filepath.IsAbs(opt.conf) {
