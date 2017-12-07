@@ -26,6 +26,9 @@ const (
 
 /// TODO: add flag cmd, for running another command
 
+/// TODO: consider: -conf-path, -candidate-dirs, -conf-list
+///               : -conf-new, -conf-list
+
 type option struct {
 	// one shot
 	version  bool
@@ -51,7 +54,7 @@ type option struct {
 
 	// TODO: add flags?
 	// out string // specify output to file
-	// execute string // specify commands: -e [command]
+	// cmd string // for runnning another command
 
 	// modify conf
 	watch   string /// add watch to conf
