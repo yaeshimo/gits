@@ -13,7 +13,6 @@ import (
 func TestMain(m *testing.M) {
 	if _, err := exec.LookPath("git"); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, "test is stopped")
 		os.Exit(2)
 	}
 	DefConfName = ""
@@ -233,6 +232,20 @@ func TestRun(t *testing.T) {
 
 		tests := []testData{
 		// TODO: add case
+		}
+		testRun(t, tests)
+	})
+
+	t.Run("match", func(t *testing.T) {
+		tests := []testData{
+			{
+				args:    []string{"gits", "-match", "invalid"},
+				wanterr: true,
+			},
+			{
+				args: []string{"gits", "-match", filepath.Base(gitdir), "status"},
+				wanterr: false,
+			},
 		}
 		testRun(t, tests)
 	})

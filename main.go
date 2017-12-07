@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const version = "0.0.0"
+const version = "0.0.1"
 
 const (
 	validExit = iota
@@ -44,7 +44,7 @@ type option struct {
 	unwatch string /// delte watch in conf
 
 	git     string
-	key     string
+	match   string
 	conf    string
 	confdir string
 	timeout time.Duration
@@ -125,7 +125,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 
 	// setting
 	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
-	flags.StringVar(&opt.key, "key", "", "specify target repository")
+	flags.StringVar(&opt.match, "match", "", "specify target repositories")
 
 	flags.StringVar(&opt.conf, "conf", DefConfName, "accept base name or full path, to json format watchlist")
 	flags.StringVar(&opt.conf, "c", DefConfName, "alias of [-conf]")
@@ -143,7 +143,9 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			confpath = filepath.Join(opt.confdir, filepath.Base(opt.conf))
 		}
 	}
+
 	wc := newWatchConf(confpath)
+
 	if confpath != "" {
 		var err error
 		wc.wl, err = readWatchList(wc.path)
@@ -152,13 +154,18 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			return exitWithErr
 		}
 	}
-	if opt.key != "" {
-		info, ok := wc.wl.Map[opt.key]
-		if !ok {
-			fmt.Fprintf(errw, "not found [%s] in repository map", opt.key)
-			return exitWithErr
+	if opt.match != "" {
+		for key := range wc.wl.Map {
+			matched, err := filepath.Match(opt.match, key)
+			if err != nil {
+				fmt.Fprintln(errw, err)
+				return exitWithErr
+			}
+			if matched {
+				continue
+			}
+			delete(wc.wl.Map, key)
 		}
-		wc.wl.Map = map[string]repoInfo{opt.key: info}
 	}
 
 	// one shot
