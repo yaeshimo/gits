@@ -113,11 +113,19 @@ func newGits(path string) *gits {
 		path: path,
 	}
 }
+
 func (g *gits) watch(repoPath string) (string, error) {
 	fullpath, err := filepath.Abs(repoPath)
 	if err != nil {
 		return "", err
 	}
+	dotgit := filepath.Join(fullpath, ".git")
+	if info, err := os.Stat(dotgit); os.IsNotExist(err) {
+		return "", err
+	} else if err == nil && !info.IsDir() {
+		return "", fmt.Errorf("is not directory: %v", dotgit)
+	}
+
 	key := filepath.Base(fullpath)
 	if err := g.wl.watch(fullpath, key); err != nil {
 		return "", err
@@ -127,8 +135,13 @@ func (g *gits) watch(repoPath string) (string, error) {
 	}
 	return key, nil
 }
+
 func (g *gits) unwatch(repoPath string) (string, error) {
-	key := filepath.Base(repoPath)
+	fullpath, err := filepath.Abs(repoPath)
+	if err != nil {
+		return "", err
+	}
+	key := filepath.Base(fullpath)
 	if err := g.wl.unwatch(key); err != nil {
 		return "", err
 	}
@@ -137,6 +150,7 @@ func (g *gits) unwatch(repoPath string) (string, error) {
 	}
 	return key, nil
 }
+
 func (g *gits) getConfList() ([]string, error) {
 	infos, err := ioutil.ReadDir(filepath.Dir(g.path))
 	if err != nil {

@@ -55,9 +55,8 @@ func TestRun(t *testing.T) {
 		wanterr bool
 	}
 	testRun := func(t *testing.T, tests []testData) {
-		var s, errs string
-		buf := bytes.NewBufferString(s)
-		errbuf := bytes.NewBufferString(errs)
+		buf := bytes.NewBufferString(string(""))
+		errbuf := bytes.NewBufferString(string(""))
 		for i, test := range tests {
 			exitCode := run(buf, errbuf, nil, test.args)
 			switch exitCode {
@@ -70,8 +69,12 @@ func TestRun(t *testing.T) {
 					t.Logf("t.Logf [%d] passed error: %+v", i, errbuf)
 				} else {
 					t.Errorf("t.Errorf [%d] want error but passed: errbuf:%+v", i, errbuf)
+					t.Errorf("t.Errorf [%d] errbuf: %v", i, errbuf)
+					t.Errorf("t.Errorf [%d] buf: %v", i, buf)
 					t.Errorf("t.Errorf [%d] args: %v", i, test.args)
 				}
+			default:
+				t.Fatal("undefined exit code:", exitCode)
 			}
 			t.Logf("t.Logf [%d] outbuf: %+v", i, buf)
 			buf.Reset()
@@ -120,19 +123,24 @@ func TestRun(t *testing.T) {
 		}
 
 		prefix := []string{"gits", "-conf", conf.Name()}
-		dir, err := ioutil.TempDir("", "gits_test")
+		notGitDir, err := ioutil.TempDir("", "gits_test")
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(dir)
-		tests := []testData{
-			{args: []string{"gits", "-conf", "", "-watch", dir}, wanterr: true},
-			{args: []string{"gits", "-conf", dir, "-watch", "path"}, wanterr: true},
+		defer os.Remove(notGitDir)
 
-			// writed physical file
-			{args: append(prefix, "-watch", dir), wanterr: false},
-			// already watched
-			{args: append(prefix, "-watch", dir), wanterr: true},
+		gitDir := filepath.Join(notGitDir, "dir")
+		if err := os.MkdirAll(filepath.Join(gitDir, ".git"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(gitDir)
+
+		tests := []testData{
+			{args: []string{"gits", "-conf", "", "-watch", notGitDir}, wanterr: true},
+			{args: []string{"gits", "-conf", "", "-watch", "path"}, wanterr: true},
+			{args: append(prefix, "-watch", notGitDir), wanterr: true},
+
+			{args: append(prefix, "-watch", gitDir), wanterr: false},
 		}
 		testRun(t, tests)
 	})
