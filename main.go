@@ -24,6 +24,8 @@ const (
 	exitWithErr
 )
 
+/// TODO: add flag cmd, for running another command
+
 type option struct {
 	// one shot
 	version  bool
