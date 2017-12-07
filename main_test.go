@@ -25,7 +25,7 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(gitdir)
+	defer os.RemoveAll(gitdir)
 	conf, err := ioutil.TempFile("", "gits_test_conf_json")
 	if err != nil {
 		t.Fatal(err)
@@ -89,66 +89,24 @@ func TestRun(t *testing.T) {
 
 		tests := []testData{
 			// valid args
-			{
-				args:    []string{"gits", "-version"},
-				wanterr: false,
-			},
-			{
-				args:    []string{"gits", "-template"},
-				wanterr: false,
-			},
-			{
-				args:    []string{"gits", "-list"},
-				wanterr: false,
-			},
-			{
-				args:    []string{"gits", "version"},
-				wanterr: false,
-			},
-			{
-				args:    []string{"gits", "--conf-path"},
-				wanterr: false,
-			},
+			{args: []string{"gits", "-version"}, wanterr: false},
+			{args: []string{"gits", "-template"}, wanterr: false},
+			{args: []string{"gits", "-list"}, wanterr: false},
+			{args: []string{"gits", "version"}, wanterr: false},
+			{args: []string{"gits", "--conf-path"}, wanterr: false},
 			// invalid args
-			{
-				args:    []string{"gits"},
-				wanterr: true,
-			},
-			{
-				args:    []string{"gits", `-git=""`, "version"},
-				wanterr: true,
-			},
-			{
-				args:    []string{"gits", "status", "--invalid--git--flags"},
-				wanterr: true,
-			},
-			{
-				args:    []string{"gits", "not implementation"},
-				wanterr: true,
-			},
+			{args: []string{"gits"}, wanterr: true},
+			{args: []string{"gits", `-git=""`, "version"}, wanterr: true},
+			{args: []string{"gits", "status", "--invalid--git--flags"}, wanterr: true},
+			{args: []string{"gits", "not implementation"}, wanterr: true},
 
 			// conf valid
-			{
-				args:    []string{"gits", "-conf", conf.Name(), "version"},
-				wanterr: false,
-			},
-			{
-				args:    []string{"gits", "-conf", conf.Name(), "-list"},
-				wanterr: false,
-			},
+			{args: []string{"gits", "-conf", conf.Name(), "version"}, wanterr: false},
+			{args: []string{"gits", "-conf", conf.Name(), "-list"}, wanterr: false},
 			// conf invalid
-			{
-				args:    []string{"gits", "-conf", vanishedFilePath},
-				wanterr: true,
-			},
-			{
-				args:    []string{"gits", "-conf", conf.Name(), "fetch"},
-				wanterr: true,
-			},
-			{
-				args:    []string{"gits", "-conf", conf.Name(), "status", "--invalid-git-flags"},
-				wanterr: true,
-			},
+			{args: []string{"gits", "-conf", vanishedFilePath}, wanterr: true},
+			{args: []string{"gits", "-conf", conf.Name(), "fetch"}, wanterr: true},
+			{args: []string{"gits", "-conf", conf.Name(), "status", "--invalid-git-flags"}, wanterr: true},
 		}
 		testRun(t, tests)
 	})
@@ -168,22 +126,13 @@ func TestRun(t *testing.T) {
 		}
 		defer os.Remove(dir)
 		tests := []testData{
-			{
-				args:    []string{"gits", "-conf", "", "-watch", dir},
-				wanterr: true,
-			},
-			{
-				args:    []string{"gits", "-conf", dir, "-watch", "path"},
-				wanterr: true,
-			},
-			{
-				args:    append(prefix, "-watch", dir),
-				wanterr: false, // writed physical file
-			},
-			{
-				args:    append(prefix, "-watch", dir),
-				wanterr: true, // already watched
-			},
+			{args: []string{"gits", "-conf", "", "-watch", dir}, wanterr: true},
+			{args: []string{"gits", "-conf", dir, "-watch", "path"}, wanterr: true},
+
+			// writed physical file
+			{args: append(prefix, "-watch", dir), wanterr: false},
+			// already watched
+			{args: append(prefix, "-watch", dir), wanterr: true},
 		}
 		testRun(t, tests)
 	})
@@ -203,22 +152,13 @@ func TestRun(t *testing.T) {
 		}
 		defer os.Remove(dir)
 		tests := []testData{
-			{
-				args:    []string{"gits", "-conf", "", "-unwatch", gitdir},
-				wanterr: true,
-			},
-			{
-				args:    []string{"gits", "-conf", dir, "-unwatch", gitdir},
-				wanterr: true,
-			},
-			{
-				args:    append(prefix, "-unwatch", dir),
-				wanterr: true, // already is not watched
-			},
-			{
-				args:    append(prefix, "-unwatch", gitdir),
-				wanterr: false, // writed physical file
-			},
+			{args: []string{"gits", "-conf", "", "-unwatch", gitdir}, wanterr: true},
+			{args: []string{"gits", "-conf", dir, "-unwatch", gitdir}, wanterr: true},
+
+			// already is not watched
+			{args: append(prefix, "-unwatch", dir), wanterr: true},
+			// writed physical file
+			{args: append(prefix, "-unwatch", gitdir), wanterr: false},
 		}
 		testRun(t, tests)
 	})
@@ -239,14 +179,8 @@ func TestRun(t *testing.T) {
 
 	t.Run("match", func(t *testing.T) {
 		tests := []testData{
-			{
-				args:    []string{"gits", "-match", "invalid"},
-				wanterr: true,
-			},
-			{
-				args: []string{"gits", "-match", filepath.Base(gitdir), "status"},
-				wanterr: false,
-			},
+			{args: []string{"gits", "-match", "invalid"}, wanterr: true},
+			{args: []string{"gits", "-match", filepath.Base(gitdir), "status"}, wanterr: false},
 		}
 		testRun(t, tests)
 	})
