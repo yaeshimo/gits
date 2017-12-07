@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const version = "0.0.4"
+const version = "0.0.5"
 
 const (
 	validExit = iota
@@ -78,18 +78,18 @@ func gitWalker(git *Subcmd, runOnSync bool, wl *watchList, args []string) []erro
 		argsWithRepo []string
 	)
 
-	var do func(string)
+	var do func(string, []string)
 	if runOnSync {
-		do = func(key string) {
+		do = func(key string, argsWithRepo []string) {
 			premsg := fmt.Sprintf("\n[%s]\n", key)
 			if err := git.Run(premsg, argsWithRepo); err != nil {
 				errs = append(errs, fmt.Errorf("[%s]:%+v", key, err))
 			}
 		}
 	} else {
-		do = func(key string) {
+		do = func(key string, argsWithRepo []string) {
 			wg.Add(1)
-			go func(key string) {
+			go func(key string, argsWithRepo []string) {
 				defer wg.Done()
 				premsg := fmt.Sprintf("\n[%s]\n", key)
 				if err := git.Run(premsg, argsWithRepo); err != nil {
@@ -97,7 +97,7 @@ func gitWalker(git *Subcmd, runOnSync bool, wl *watchList, args []string) []erro
 					errs = append(errs, fmt.Errorf("[%s]:%+v", key, err))
 					mux.Unlock()
 				}
-			}(key)
+			}(key, argsWithRepo)
 		}
 	}
 
@@ -107,7 +107,7 @@ func gitWalker(git *Subcmd, runOnSync bool, wl *watchList, args []string) []erro
 				"--work-tree=" + repoInfo.Workdir},
 			args...,
 		)
-		do(key)
+		do(key, argsWithRepo)
 	}
 	wg.Wait()
 	return errs
