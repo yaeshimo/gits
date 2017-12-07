@@ -222,49 +222,9 @@ func TestWriteWatchList(t *testing.T) {
 	})
 }
 
-func TestKeyAbs(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gits_test_abs")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(dir)
-	tests := []struct {
-		inputPath   string
-		expFullPath string
-		expKey      string
-		wanterr     bool
-	}{
-		/*{
-			inputPath: "need error is in os.Getwd",
-			wanterr: true,
-		},*/
-		{
-			inputPath:   dir,
-			wanterr:     false,
-			expFullPath: dir,
-			expKey:      filepath.Base(dir),
-		},
-	}
-	for i, test := range tests {
-		outf, outk, err := absWithBase(test.inputPath)
-		if test.wanterr && err == nil {
-			t.Fatalf("[%d]: expected error but nil", i)
-		}
-		if !test.wanterr && err != nil {
-			t.Fatalf("[%d]: %+v", i, err)
-		}
-		if outf != test.expFullPath {
-			t.Errorf("[%d]:\n\texp:%+v\n\tout:%+v", i, test.expFullPath, outf)
-		}
-		if outk != test.expKey {
-			t.Errorf("[%d]:\n\texp:%+v\n\tout:%+v", i, test.expKey, outk)
-		}
-	}
-}
-
 func TestTemplate(t *testing.T) {
 	var s string
 	buf := bytes.NewBufferString(s)
-	template(buf)
+	writeTemplate(buf)
 	t.Log(buf)
 }

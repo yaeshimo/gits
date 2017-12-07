@@ -9,18 +9,19 @@ import (
 	"time"
 )
 
-type subcmd struct {
+// Subcmd for subcommand
+type Subcmd struct {
 	name  string
 	limit time.Duration // 0 means no limit
 
-	rwmux *sync.RWMutex
-	w     io.Writer
-	errw  io.Writer
-	r     io.Reader
+	rwmux   *sync.RWMutex
+	w, errw io.Writer
+	r       io.Reader
 }
 
-func newSubcmd(w io.Writer, errw io.Writer, r io.Reader, cmdName string, delay time.Duration) *subcmd {
-	return &subcmd{
+// NewSubcmd create new Subcmd
+func NewSubcmd(w io.Writer, errw io.Writer, r io.Reader, cmdName string, delay time.Duration) *Subcmd {
+	return &Subcmd{
 		name:  cmdName,
 		limit: delay,
 
@@ -31,7 +32,8 @@ func newSubcmd(w io.Writer, errw io.Writer, r io.Reader, cmdName string, delay t
 	}
 }
 
-func (sub *subcmd) run(premsg string, args []string) error {
+// Run running sub commands
+func (sub *Subcmd) Run(premsg string, args []string) error {
 	var cmd *exec.Cmd
 	if sub.limit != 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), sub.limit)
@@ -50,14 +52,15 @@ func (sub *subcmd) run(premsg string, args []string) error {
 	return cmd.Run()
 }
 
-// TODO: really need?
-func (sub *subcmd) WriteString(s string) (int, error) {
+// WriteString TODO: really need?
+func (sub *Subcmd) WriteString(s string) (int, error) {
 	sub.rwmux.Lock()
 	defer sub.rwmux.Unlock()
 	return fmt.Fprintln(sub.w, s)
 }
 
-func (sub *subcmd) WriteErrString(s string) (int, error) {
+// WriteErrString write to *subcmd.err
+func (sub *Subcmd) WriteErrString(s string) (int, error) {
 	sub.rwmux.Lock()
 	defer sub.rwmux.Unlock()
 	return fmt.Fprintln(sub.errw, s)

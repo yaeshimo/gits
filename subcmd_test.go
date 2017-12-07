@@ -28,8 +28,8 @@ func TestSubcmd(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		sub := newSubcmd(ioutil.Discard, ioutil.Discard, nil, test.cmdname, time.Second)
-		if err := sub.run("", test.args); err != nil {
+		sub := NewSubcmd(ioutil.Discard, ioutil.Discard, nil, test.cmdname, time.Second)
+		if err := sub.Run("", test.args); err != nil {
 			if test.wanterr {
 				t.Logf("t.Logf err: %+v", err)
 			} else {
@@ -46,7 +46,7 @@ func BenchmarkSubcmd(b *testing.B) {
 		var s, errs string
 		buf := bytes.NewBufferString(s)
 		errbuf := bytes.NewBufferString(errs)
-		git := newSubcmd(buf, errbuf, nil, "git", time.Hour)
+		git := NewSubcmd(buf, errbuf, nil, "git", time.Hour)
 		args := []string{"version"}
 
 		wg := new(sync.WaitGroup)
@@ -57,7 +57,7 @@ func BenchmarkSubcmd(b *testing.B) {
 			wg.Add(1)
 			go func(i int) {
 				defer wg.Done()
-				if err := git.run(fmt.Sprintln(i), args); err != nil {
+				if err := git.Run(fmt.Sprintln(i), args); err != nil {
 					once.Do(func() { b.Fatal(err) })
 				}
 			}(i)
@@ -69,12 +69,12 @@ func BenchmarkSubcmd(b *testing.B) {
 		var s, errs string
 		buf := bytes.NewBufferString(s)
 		errbuf := bytes.NewBufferString(errs)
-		git := newSubcmd(buf, errbuf, nil, "git", time.Hour)
+		git := NewSubcmd(buf, errbuf, nil, "git", time.Hour)
 		args := []string{"version"}
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			if err := git.run(fmt.Sprintln(i), args); err != nil {
+			if err := git.Run(fmt.Sprintln(i), args); err != nil {
 				b.Fatal(err)
 			}
 		}

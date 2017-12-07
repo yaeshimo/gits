@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const version = "0.0.2"
+const version = "0.0.4"
 
 const (
 	validExit = iota
@@ -25,42 +25,47 @@ const (
 )
 
 type option struct {
+	// one shot
 	version  bool
 	template bool
 	list     bool
 	edit     bool
 
+	// setting
+	git     string
+	sync    bool
+	match   string
+	conf    string
+	confdir string
+	timeout time.Duration
+
+	// show contents of conf
 	showConfPath bool
 	showConfDirs bool
 	showConfList bool
 
+	// new conf
 	confNew string // create configuration file to confDir
 
 	// TODO: add flags?
-	// logfile string // specify output logfile
+	// out string // specify output to file
 	// execute string // specify commands: -e [command]
 
+	// modify conf
 	watch   string /// add watch to conf
 	unwatch string /// delte watch in conf
-
-	git     string
-	match   string
-	conf    string
-	confdir string
-	sync    bool
-	timeout time.Duration
 }
 
 // repository walker
 // use: git --git-dir=/path/to/work/.git --work-tree=/path/to/work
 // TODO: sync consider to join structure of subcmd
-func gitWalker(git *subcmd, runOnSync bool, wl *watchList, args []string) []error {
+func gitWalker(git *Subcmd, runOnSync bool, wl *watchList, args []string) []error {
 	// work on current directory
-	// need it?
-	if wl.Map == nil || len(wl.Map) == 0 {
+	// TODO: need it? case len(w.Map) == 0
+	if len(wl.Map) == 0 {
 		msg := fmt.Sprintf("not found git repositories:\n\twork on current directory\n")
 		git.WriteErrString(msg)
-		if err := git.run("", args); err != nil {
+		if err := git.Run("", args); err != nil {
 			return []error{err}
 		}
 		return nil
@@ -77,7 +82,7 @@ func gitWalker(git *subcmd, runOnSync bool, wl *watchList, args []string) []erro
 	if runOnSync {
 		do = func(key string) {
 			premsg := fmt.Sprintf("\n[%s]\n", key)
-			if err := git.run(premsg, argsWithRepo); err != nil {
+			if err := git.Run(premsg, argsWithRepo); err != nil {
 				errs = append(errs, fmt.Errorf("[%s]:%+v", key, err))
 			}
 		}
@@ -87,7 +92,7 @@ func gitWalker(git *subcmd, runOnSync bool, wl *watchList, args []string) []erro
 			go func(key string) {
 				defer wg.Done()
 				premsg := fmt.Sprintf("\n[%s]\n", key)
-				if err := git.run(premsg, argsWithRepo); err != nil {
+				if err := git.Run(premsg, argsWithRepo); err != nil {
 					mux.Lock()
 					errs = append(errs, fmt.Errorf("[%s]:%+v", key, err))
 					mux.Unlock()
@@ -108,17 +113,16 @@ func gitWalker(git *subcmd, runOnSync bool, wl *watchList, args []string) []erro
 	return errs
 }
 
+// open configuration files on editor
 func editConf(w, errw io.Writer, r io.Reader, editor, confpath string) error {
 	if info, err := os.Stat(confpath); err != nil {
 		return err
 	} else if !info.Mode().IsRegular() {
 		return fmt.Errorf("%s is not regular file", confpath)
 	}
-	sub := newSubcmd(w, errw, r, editor, 0)
-	return sub.run("", []string{confpath})
+	sub := NewSubcmd(w, errw, r, editor, 0)
+	return sub.Run("", []string{confpath})
 }
-
-// TODO: split file for configuration file path?
 
 func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	opt := option{}
@@ -130,30 +134,29 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	flags.BoolVar(&opt.template, "template", false, "output the template of watchlist")
 	flags.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
 	flags.BoolVar(&opt.edit, "edit", false, "open conf on your editor(default:"+DefEditor+")")
-	flags.BoolVar(&opt.sync, "sync", false, "run on sync")
 
+	// setting
+	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
+	flags.BoolVar(&opt.sync, "sync", false, "run on sync")
+	flags.StringVar(&opt.match, "match", "", "specify target repositories")
+	flags.StringVar(&opt.conf, "conf", DefConfName, "accept base name or full path, to json format watchlist")
+	flags.StringVar(&opt.conf, "c", DefConfName, "alias of [-conf]")
+	flags.StringVar(&opt.confdir, "conf-dir", DefConfDir, "specify conf directory")
+	flags.DurationVar(&opt.timeout, "timeout", 0, "set timeout for running git, 0 means no limit")
+
+	// show contents of conf
 	flags.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
 	flags.BoolVar(&opt.showConfDirs, "candidate-dirs", false, "show candidate conf directories")
 	flags.BoolVar(&opt.showConfList, "conf-list", false, "show configuration set list")
 
+	// new conf
 	flags.StringVar(&opt.confNew, "conf-new", "", "generate new configuration file to conf directory")
 
 	// modify conf
 	flags.StringVar(&opt.watch, "watch", "", "add watching repository to conf")
 	flags.StringVar(&opt.unwatch, "unwatch", "", "remove watching repository in conf")
-
-	// setting
-	flags.StringVar(&opt.git, "git", "git", "command name of git or full path")
-	flags.StringVar(&opt.match, "match", "", "specify target repositories")
-
-	flags.StringVar(&opt.conf, "conf", DefConfName, "accept base name or full path, to json format watchlist")
-	flags.StringVar(&opt.conf, "c", DefConfName, "alias of [-conf]")
-
-	flags.StringVar(&opt.confdir, "conf-dir", DefConfDir, "specify conf directory")
-	flags.DurationVar(&opt.timeout, "timeout", 0, "set timeout for running git, 0 means no limit")
 	flags.Parse(args[1:])
 
-	/// TODO: reconsider confs
 	var confpath string
 	if opt.conf != "" {
 		if filepath.IsAbs(opt.conf) {
@@ -163,18 +166,18 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		}
 	}
 
-	wc := newWatchConf(confpath)
+	gits := newGits(confpath)
 
 	if confpath != "" {
 		var err error
-		wc.wl, err = readWatchList(wc.path)
+		gits.wl, err = readWatchList(gits.path)
 		if err != nil {
 			fmt.Fprintln(errw, err)
 			return exitWithErr
 		}
 	}
 	if opt.match != "" {
-		for key := range wc.wl.Map {
+		for key := range gits.wl.Map {
 			matched, err := filepath.Match(opt.match, key)
 			if err != nil {
 				fmt.Fprintln(errw, err)
@@ -183,7 +186,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			if matched {
 				continue
 			}
-			delete(wc.wl.Map, key)
+			delete(gits.wl.Map, key)
 		}
 	}
 
@@ -200,7 +203,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			fmt.Fprintln(w, strings.Join(DefConfDirList, "\n"))
 			return validExit
 		case opt.showConfList:
-			confList, err := wc.getConfList()
+			confList, err := gits.getConfList()
 			if err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
@@ -216,13 +219,13 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			fmt.Fprintln(w, "configuration file was written: "+mkpath)
 			return validExit
 		case opt.template:
-			if err := template(w); err != nil {
+			if err := writeTemplate(w); err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
 			return validExit
 		case opt.list:
-			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, wc.wl)
+			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, gits.wl)
 			return validExit
 		case opt.edit:
 			if err := editConf(w, errw, r, DefEditor, confpath); err != nil {
@@ -231,20 +234,20 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 			}
 			return validExit
 		case opt.watch != "":
-			key, err := wc.watch(opt.watch)
+			key, err := gits.watch(opt.watch)
 			if err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			fmt.Fprintf(w, "conf:[%s]\n%s\nappended [%s]\n", wc.path, wc.wl, key)
+			fmt.Fprintf(w, "conf:[%s]\n%s\nappended [%s]\n", gits.path, gits.wl, key)
 			return validExit
 		case opt.unwatch != "":
-			key, err := wc.unwatch(opt.unwatch)
+			key, err := gits.unwatch(opt.unwatch)
 			if err != nil {
 				fmt.Fprintln(errw, err)
 				return exitWithErr
 			}
-			fmt.Fprintf(w, "conf:[%s]\n%s\nremoved [%s]\n", wc.path, wc.wl, key)
+			fmt.Fprintf(w, "conf:[%s]\n%s\nremoved [%s]\n", gits.path, gits.wl, key)
 			return validExit
 		default:
 			flags.Usage()
@@ -252,16 +255,18 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 		}
 	}
 
-	if !wc.wl.isAllow(flags.Arg(0)) {
-		fmt.Fprintf(errw, "Configuration file path:\n\t[%s]\n%s\n", confpath, wc.wl)
+	if !gits.wl.isAllow(flags.Arg(0)) {
+		fmt.Fprintf(errw, "Configuration file path:\n\t[%s]\n%s\n", confpath, gits.wl)
 		fmt.Fprintf(errw, "This argument is not allowed: %+v\n", flags.Args())
 		return exitWithErr
 	}
 
-	git := newSubcmd(w, errw, r, opt.git, opt.timeout)
-	if errs := gitWalker(git, opt.sync, wc.wl, flags.Args()); errs != nil {
+	git := NewSubcmd(w, errw, r, opt.git, opt.timeout)
+	if errs := gitWalker(git, opt.sync, gits.wl, flags.Args()); errs != nil {
 		fmt.Fprintln(errw, "---------- found error ----------")
-		fmt.Fprintln(errw, errs)
+		for _, err := range errs {
+			fmt.Fprintln(errw, err)
+		}
 		return exitWithErr
 	}
 	return validExit
