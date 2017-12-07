@@ -29,6 +29,8 @@ const (
 /// TODO: consider: -conf-path, -candidate-dirs, -conf-list
 ///               : -conf-new, -conf-list
 
+/// TODO: add color
+
 type option struct {
 	// one shot
 	version  bool
