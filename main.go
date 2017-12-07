@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const version = "0.0.1"
+const version = "0.0.2"
 
 const (
 	validExit = iota
@@ -47,12 +47,14 @@ type option struct {
 	match   string
 	conf    string
 	confdir string
+	sync    bool
 	timeout time.Duration
 }
 
 // repository walker
 // use: git --git-dir=/path/to/work/.git --work-tree=/path/to/work
-func gitWalker(git *subcmd, wl *watchList, args []string) []error {
+// TODO: sync consider to join structure of subcmd
+func gitWalker(git *subcmd, runOnSync bool, wl *watchList, args []string) []error {
 	// work on current directory
 	// need it?
 	if wl.Map == nil || len(wl.Map) == 0 {
@@ -65,26 +67,42 @@ func gitWalker(git *subcmd, wl *watchList, args []string) []error {
 	}
 
 	var (
-		errs []error
-		mux  = new(sync.Mutex)
-		wg   = new(sync.WaitGroup)
+		errs         []error
+		mux          = new(sync.Mutex)
+		wg           = new(sync.WaitGroup)
+		argsWithRepo []string
 	)
 
-	for key, repoInfo := range wl.Map {
-		argsWithRepo := append([]string{
-			"--git-dir=" + repoInfo.Gitdir,
-			"--work-tree=" + repoInfo.Workdir},
-			args...)
-		wg.Add(1)
-		go func(key string) {
-			defer wg.Done()
+	var do func(string)
+	if runOnSync {
+		do = func(key string) {
 			premsg := fmt.Sprintf("\n[%s]\n", key)
 			if err := git.run(premsg, argsWithRepo); err != nil {
-				mux.Lock()
 				errs = append(errs, fmt.Errorf("[%s]:%+v", key, err))
-				mux.Unlock()
 			}
-		}(key)
+		}
+	} else {
+		do = func(key string) {
+			wg.Add(1)
+			go func(key string) {
+				defer wg.Done()
+				premsg := fmt.Sprintf("\n[%s]\n", key)
+				if err := git.run(premsg, argsWithRepo); err != nil {
+					mux.Lock()
+					errs = append(errs, fmt.Errorf("[%s]:%+v", key, err))
+					mux.Unlock()
+				}
+			}(key)
+		}
+	}
+
+	for key, repoInfo := range wl.Map {
+		argsWithRepo = append(
+			[]string{"--git-dir=" + repoInfo.Gitdir,
+				"--work-tree=" + repoInfo.Workdir},
+			args...,
+		)
+		do(key)
 	}
 	wg.Wait()
 	return errs
@@ -112,6 +130,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	flags.BoolVar(&opt.template, "template", false, "output the template of watchlist")
 	flags.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
 	flags.BoolVar(&opt.edit, "edit", false, "open conf on your editor(default:"+DefEditor+")")
+	flags.BoolVar(&opt.sync, "sync", false, "run on sync")
 
 	flags.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
 	flags.BoolVar(&opt.showConfDirs, "candidate-dirs", false, "show candidate conf directories")
@@ -240,7 +259,7 @@ func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
 	}
 
 	git := newSubcmd(w, errw, r, opt.git, opt.timeout)
-	if errs := gitWalker(git, wc.wl, flags.Args()); errs != nil {
+	if errs := gitWalker(git, opt.sync, wc.wl, flags.Args()); errs != nil {
 		fmt.Fprintln(errw, "---------- found error ----------")
 		fmt.Fprintln(errw, errs)
 		return exitWithErr
