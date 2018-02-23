@@ -4,7 +4,7 @@ Management tool for git repositories
 
 Usage:
 ------
-1. Generate JSON format configuration file (contain paths to git repositories)
+1. Generate JSON format configuration file (is contain paths to git repositories)
 	```sh
 	# list candidate paths to the configuration file
 	gits -list-config
@@ -15,6 +15,7 @@ Usage:
 	# output to stdout then check the template
 	gits -template
 
+	# on linux
 	# write configuration file
 	gits -template > "$HOME"/.gits.json
 	# or

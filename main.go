@@ -96,7 +96,7 @@ func main() {
 	flag.Parse()
 	if opt.version {
 		fmt.Fprintf(os.Stdout, "%s version %s\n", name, version)
-		os.Exit(0)
+		return
 	}
 	if opt.conf == "" {
 		for _, path := range CandidateConfPaths {
@@ -104,6 +104,12 @@ func main() {
 				opt.conf = path
 			}
 		}
+	}
+	if opt.edit {
+		if err := Edit(os.Stdout, os.Stderr, os.Stdin, opt.conf); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	gits, err := ReadJSON(opt.conf)
 	if err != nil {
@@ -131,10 +137,6 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Fprintf(os.Stdout, "Updated:\n\t[%s]\n", gits.path)
-	case opt.edit:
-		if err := Edit(os.Stdout, os.Stderr, os.Stdin, opt.conf); err != nil {
-			log.Fatal(err)
-		}
 	case opt.rm != "":
 		if err := gits.RemoveRepository(opt.rm); err != nil {
 			log.Fatal(err)
