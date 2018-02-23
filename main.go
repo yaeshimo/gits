@@ -1,292 +1,192 @@
-// git wrapper
-// Quick Usage:
-//   `gits -template > /path/a/watchlist.json`
-// edit gits.json, append your repository
-// after append
-//   `gits -conf-dir=/path/a -conf=watchlist.json status`
 package main
+
+//	TODO: impl tests
+//		: consider to separate to some functions for to simpl
 
 import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"strings"
-	"sync"
-	"time"
 )
-
-const version = "0.0.7"
 
 const (
-	validExit = iota
-	exitWithErr
+	name    = "gits"
+	version = "0.1.0dev"
 )
 
-/// TODO: add flag cmd, for running another command
-
-/// TODO: consider: -conf-path, -candidate-dirs, -conf-list
-///               : -conf-new, -conf-list
-
-/// TODO: add color
+// Default values
+// TODO: separate to conf_*.go files?
+var (
+	// TODO: consider change to []string{"$HOME/gits.json"}
+	CandidateConfPaths = []string{}
+	EditorWithArgs     = []string{"vim", "--"}
+)
 
 type option struct {
-	// one shot
-	version  bool
-	template bool
-	list     bool
-	edit     bool
-
-	// setting
-	git     string
-	sync    bool
-	match   string
+	version bool
 	conf    string
-	confdir string
-	timeout time.Duration
+	// TODO: consider to remove
+	exec string
 
-	// show contents of conf
-	showConfPath bool
-	showConfDirs bool
-	showConfList bool
+	// TODO: consider to remove
+	key   string
+	match string
 
-	// new conf
-	confNew string // create configuration file to confDir
+	edit  bool
+	add   string
+	rm    string
+	prune bool
 
-	// TODO: add flags?
-	// out string // specify output to file
-	// cmd string // for runnning another command
+	list         bool
+	listRepo     bool
+	listRepoFull bool
+	listAlias    bool
+	listConfig   bool
 
-	// modify conf
-	watch   string /// add watch to conf
-	unwatch string /// delte watch in conf
+	template bool
 }
 
-func (opt *option) init(errw io.Writer, args []string, ehandle flag.ErrorHandling) (*flag.FlagSet, error) {
-	// TODO: consider need case args == nil?
-	f := flag.NewFlagSet(args[0], ehandle)
-	f.SetOutput(errw)
+var opt = &option{}
 
-	// one shot
-	f.BoolVar(&opt.version, "version", false, "")
-	f.BoolVar(&opt.template, "template", false, "output the template of watchlist")
-	f.BoolVar(&opt.list, "list", false, "list of accept first argument and repository")
-	f.BoolVar(&opt.edit, "edit", false, "open conf on your editor(default:"+DefEditor+")")
-
-	// setting
-	f.StringVar(&opt.git, "git", "git", "command name of git or full path")
-	f.BoolVar(&opt.sync, "sync", false, "run on sync")
-	f.StringVar(&opt.match, "match", "", "specify target repositories")
-	f.StringVar(&opt.conf, "conf", DefConfName, "accept base name or full path, to json format watchlist")
-	f.StringVar(&opt.conf, "c", DefConfName, "alias of [-conf]")
-	f.StringVar(&opt.confdir, "conf-dir", DefConfDir, "specify conf directory")
-	f.DurationVar(&opt.timeout, "timeout", 0, "set timeout for running git, 0 means no limit")
-
-	// show contents of conf
-	f.BoolVar(&opt.showConfPath, "conf-path", false, "show default conf path")
-	f.BoolVar(&opt.showConfDirs, "candidate-dirs", false, "show candidate conf directories")
-	f.BoolVar(&opt.showConfList, "conf-list", false, "show configuration set list")
-
-	// new conf
-	f.StringVar(&opt.confNew, "conf-new", "", "generate new configuration file to conf directory")
-
-	// modify conf
-	f.StringVar(&opt.watch, "watch", "", "add watching repository to conf")
-	f.StringVar(&opt.unwatch, "unwatch", "", "remove watching repository in conf")
-	return f, f.Parse(args[1:])
-}
-
-// repository walker
-// use: git --git-dir=/path/to/work/.git --work-tree=/path/to/work
-// TODO: sync consider to join structure of subcmd
-func gitWalker(git *Subcmd, runOnSync bool, wl *watchList, args []string) []error {
-	// work on current directory
-	// TODO: need it? case len(w.Map) == 0
-	if len(wl.Map) == 0 {
-		msg := fmt.Sprintf("not found git repositories:\n\twork on current directory\n")
-		git.WriteErrString(msg)
-		if err := git.Run("", args); err != nil {
-			return []error{err}
-		}
-		return nil
+// Edit edit configuration file
+func Edit(w, errw io.Writer, r io.Reader, path string) error {
+	if len(EditorWithArgs) < 1 {
+		return fmt.Errorf("invalid [EditorWithArgs]: %v", EditorWithArgs)
 	}
-
-	var (
-		errs         []error
-		mux          = new(sync.Mutex)
-		wg           = new(sync.WaitGroup)
-		argsWithRepo []string
-	)
-
-	var do func(string, []string)
-	if runOnSync {
-		do = func(key string, argsWithRepo []string) {
-			premsg := fmt.Sprintf("\n[%s]\n", key)
-			if err := git.Run(premsg, argsWithRepo); err != nil {
-				errs = append(errs, fmt.Errorf("[%s]:%+v", key, err))
-			}
-		}
-	} else {
-		do = func(key string, argsWithRepo []string) {
-			wg.Add(1)
-			go func(key string, argsWithRepo []string) {
-				defer wg.Done()
-				premsg := fmt.Sprintf("\n[%s]\n", key)
-				if err := git.Run(premsg, argsWithRepo); err != nil {
-					mux.Lock()
-					errs = append(errs, fmt.Errorf("[%s]:%+v", key, err))
-					mux.Unlock()
-				}
-			}(key, argsWithRepo)
-		}
-	}
-
-	for key, repoInfo := range wl.Map {
-		argsWithRepo = append(
-			[]string{"--git-dir=" + repoInfo.Gitdir,
-				"--work-tree=" + repoInfo.Workdir},
-			args...,
-		)
-		do(key, argsWithRepo)
-	}
-	wg.Wait()
-	return errs
-}
-
-// open configuration files on editor
-func editConf(w, errw io.Writer, r io.Reader, editor, confpath string) error {
-	if info, err := os.Stat(confpath); err != nil {
+	editor := exec.Command(EditorWithArgs[0], append(EditorWithArgs[1:], path)...)
+	editor.Stdout = w
+	editor.Stderr = errw
+	editor.Stdin = r
+	if _, err := fmt.Fprintln(w, editor.Args); err != nil {
 		return err
-	} else if !info.Mode().IsRegular() {
-		return fmt.Errorf("%s is not regular file", confpath)
 	}
-	sub := NewSubcmd(w, errw, r, editor, 0)
-	return sub.Run("", []string{confpath})
+	return editor.Run()
 }
 
-func run(w io.Writer, errw io.Writer, r io.Reader, args []string) int {
-	opt := &option{}
-	flags, err := opt.init(errw, args, flag.ExitOnError)
-	if err != nil {
-		fmt.Fprintln(errw, err)
-		return exitWithErr
-	}
-	var confpath string
-	if opt.conf != "" {
-		if filepath.IsAbs(opt.conf) {
-			confpath = opt.conf
-		} else {
-			confpath = filepath.Join(opt.confdir, filepath.Base(opt.conf))
-		}
-	}
+func init() {
+	log.SetFlags(log.Lshortfile)
+	log.SetPrefix("[" + name + "]:")
+	flag.BoolVar(&opt.version, "version", false, "show version")
+	flag.StringVar(&opt.conf, "config", "", "specify path to configuration JSON format files")
+	flag.StringVar(&opt.exec, "exec", "git", "specify execute command name")
 
-	gits := newGits(confpath)
+	flag.StringVar(&opt.key, "key", "", "specify repository name for append repository")
+	flag.StringVar(&opt.match, "match", "", "match for pick repostories")
 
-	if confpath != "" {
-		var err error
-		gits.wl, err = readWatchList(gits.path)
-		if err != nil {
-			fmt.Fprintln(errw, err)
-			return exitWithErr
-		}
-	}
-	if opt.match != "" {
-		for key := range gits.wl.Map {
-			matched, err := filepath.Match(opt.match, key)
-			if err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			if matched {
-				continue
-			}
-			delete(gits.wl.Map, key)
-		}
-	}
+	flag.BoolVar(&opt.edit, "edit", false, "edit config")
+	flag.StringVar(&opt.add, "add", "", "specify path to directory for add to configuration files")
+	flag.StringVar(&opt.rm, "rm", "", "specify key to remove from configuration file")
+	flag.BoolVar(&opt.prune, "prune", false, "prune invalid worktree from configuration file")
 
-	// one shot
-	if flags.NArg() == 0 {
-		switch {
-		case opt.version:
-			fmt.Fprintf(w, "version %s\n", version)
-			return validExit
-		case opt.showConfPath:
-			fmt.Fprintln(w, confpath)
-			return validExit
-		case opt.showConfDirs:
-			fmt.Fprintln(w, strings.Join(DefConfDirList, "\n"))
-			return validExit
-		case opt.showConfList:
-			confList, err := gits.getConfList()
-			if err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			fmt.Fprintln(w, strings.Join(confList, "\n"))
-			return validExit
-		case opt.confNew != "":
-			mkpath := filepath.Join(DefConfDir, filepath.Base(opt.confNew))
-			if err := createConf(mkpath); err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			fmt.Fprintln(w, "configuration file was written: "+mkpath)
-			return validExit
-		case opt.template:
-			if err := writeTemplate(w); err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			return validExit
-		case opt.list:
-			fmt.Fprintf(w, "conf:[%s]\n%s\n", confpath, gits.wl)
-			return validExit
-		case opt.edit:
-			if err := editConf(w, errw, r, DefEditor, confpath); err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			return validExit
-		case opt.watch != "":
-			key, err := gits.watch(opt.watch)
-			if err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			fmt.Fprintf(w, "conf:[%s]\n%s\nappended [%s]\n", gits.path, gits.wl, key)
-			return validExit
-		case opt.unwatch != "":
-			key, err := gits.unwatch(opt.unwatch)
-			if err != nil {
-				fmt.Fprintln(errw, err)
-				return exitWithErr
-			}
-			fmt.Fprintf(w, "conf:[%s]\n%s\nremoved [%s]\n", gits.path, gits.wl, key)
-			return validExit
-		default:
-			flags.Usage()
-			return exitWithErr
-		}
-	}
+	flag.BoolVar(&opt.list, "list", false, "show content of configuration file")
+	flag.BoolVar(&opt.listRepo, "list-repo", false, "list repositories")
+	flag.BoolVar(&opt.listRepoFull, "list-repo-full", false, "list repositories with full path")
+	flag.BoolVar(&opt.listAlias, "list-alias", false, "list alias")
+	flag.BoolVar(&opt.listConfig, "list-config", false, "list candidate paths to the configuration file")
 
-	if !gits.wl.isAllow(flags.Arg(0)) {
-		fmt.Fprintf(errw, "Configuration file path:\n\t[%s]\n%s\n", confpath, gits.wl)
-		fmt.Fprintf(errw, "This argument is not allowed: %+v\n", flags.Args())
-		return exitWithErr
-	}
-
-	git := NewSubcmd(w, errw, r, opt.git, opt.timeout)
-	if errs := gitWalker(git, opt.sync, gits.wl, flags.Args()); errs != nil {
-		fmt.Fprintln(errw, "---------- found error ----------")
-		for _, err := range errs {
-			fmt.Fprintln(errw, err)
-		}
-		return exitWithErr
-	}
-	return validExit
+	flag.BoolVar(&opt.template, "template", false, "show configuration template")
 }
 
+// TODO: error handling for fmt
 func main() {
-	os.Exit(run(os.Stdout, os.Stderr, os.Stdin, os.Args))
+	flag.Parse()
+	if opt.version {
+		fmt.Fprintf(os.Stdout, "%s version %s\n", name, version)
+		os.Exit(0)
+	}
+	if opt.conf == "" {
+		for _, path := range CandidateConfPaths {
+			if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
+				opt.conf = path
+			}
+		}
+	}
+	gits, err := ReadJSON(opt.conf)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// TODO: consider to split to functions from flags
+	// 1. run
+	// 2. check error
+	// 3. output err or valid message
+	switch {
+	case opt.add != "":
+		root, err := GetGitToplevel(opt.add)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := gits.AddRepository(opt.key, root); err != nil {
+			log.Fatal(err)
+		}
+		if err := gits.Update(); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stdout, "Appended Repositories:\n\t[%s]\nCurrent List:\n", root)
+		if err := gits.FprintIndent(os.Stdout, "", "\t"); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stdout, "Updated:\n\t[%s]\n", gits.path)
+	case opt.edit:
+		if err := Edit(os.Stdout, os.Stderr, os.Stdin, opt.conf); err != nil {
+			log.Fatal(err)
+		}
+	case opt.rm != "":
+		if err := gits.RemoveRepository(opt.rm); err != nil {
+			log.Fatal(err)
+		}
+		if err := gits.Update(); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stdout, "Removed Repositories:\n\t[%s]\nCurrent List:\n", opt.rm)
+		if err := gits.FprintIndent(os.Stdout, "", "\t"); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stdout, "Updated:\n\t[%s]\n", gits.path)
+	case opt.prune:
+		if removed, err := gits.Prune(); err != nil {
+			log.Fatal(err)
+		} else if len(removed) != 0 {
+			fmt.Fprintf(os.Stdout, "Pruned:\n\t\"%s\"\n", strings.Join(removed, "\n\t"))
+		}
+		if err := gits.Update(); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stdout, "Current List:\n")
+		if err := gits.FprintIndent(os.Stdout, "", "\t"); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stdout, "Updated:\n\t[%s]\n", gits.path)
+	case opt.list:
+		if err := gits.FprintIndent(os.Stdout, "", "\t"); err != nil {
+			log.Fatal(err)
+		}
+	case opt.listRepo:
+		gits.ListRepositories(os.Stdout)
+	case opt.listRepoFull:
+		gits.ListRepositoriesFull(os.Stdout)
+	case opt.listAlias:
+		if err := gits.ListAlias(os.Stdout, opt.exec); err != nil {
+			log.Fatal(err)
+		}
+	case opt.listConfig:
+		fmt.Fprintf(os.Stdout, "Candidates:\n[high priority]\n")
+		for i, s := range CandidateConfPaths {
+			fmt.Fprintf(os.Stdout, "\t%d. %s\n", i+1, s)
+		}
+		fmt.Fprintln(os.Stdout, "[low priority]")
+	case opt.template:
+		b, err := Template()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stdout, "%s\n", string(b))
+	default:
+		args := append([]string{opt.exec}, flag.Args()...)
+		os.Exit(gits.Run(os.Stdout, os.Stderr, os.Stdin, opt.match, args))
+	}
 }
