@@ -32,8 +32,6 @@ type option struct {
 	// TODO: consider to remove
 	exec string
 
-	// TODO: consider to remove
-	key   string
 	match string
 
 	edit  bool
@@ -74,7 +72,6 @@ func init() {
 	flag.StringVar(&opt.conf, "config", "", "specify path to configuration JSON format files")
 	flag.StringVar(&opt.exec, "exec", "git", "specify executable command name")
 
-	flag.StringVar(&opt.key, "key", "", "specify repository name for append repository")
 	flag.StringVar(&opt.match, "match", "", "for pick any repostories with regexp RE2")
 
 	flag.BoolVar(&opt.edit, "edit", false, "edit config")
@@ -126,7 +123,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := gits.AddRepository(opt.key, root); err != nil {
+		if err := gits.AddRepository("", root); err != nil {
 			log.Fatal(err)
 		}
 		if err := gits.Update(); err != nil {

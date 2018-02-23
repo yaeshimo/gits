@@ -172,6 +172,7 @@ func GetGitToplevel(path string) (string, error) {
 }
 
 // AddRepository append repository
+// TODO: consider to remove the key
 func (gits *Gits) AddRepository(key string, path string) error {
 	abs, err := GetGitToplevel(path)
 	if err != nil {
