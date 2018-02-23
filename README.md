@@ -1,77 +1,79 @@
 gits
 ====
-management tool for git repositories
-
+Management tool for git repositories
 
 Usage:
 ------
-1. **Generate watchlist**  
-```sh
-gits -template > /path/to/your/watchlist.json
-```
+1. Generate JSON format configuration file (is contain paths to git repositories)
+	```sh
+	# list candidate paths to the configuration file
+	gits -list-candidates
 
-2. **Append your git repositories to watchlist**  
-  edit watchlist.json yourself, append your repository info  
-  or  
-  use command  
-```sh
-cd /your/git/repository
-gits -conf /path/to/your/watchlist.json -watch ./
-```
+	# change directory to repository
+	cd /path/to/repository
 
-3. **After append**  
-```sh
-gits -conf /path/to/your/watchlist.json status
-gits -conf /path/to/your/watchlist.json fetch
-gits -conf /path/to/your/watchlist.json grep [word]
-...etc
-```
+	# output to stdout then check the template
+	gits -template
 
-4. **Unwatch**  
-  remove repository info
-```sh
-cd /your/git/repository
-gits -conf /path/to/your/watchlist.json -unwatch ./
-```
+	# on linux
+	# write configuration file
+	gits -template > "$HOME"/.gits.json
+	# or
+	mkdir -p "$HOME"/.config/gits
+	gits -template > "$HOME"/.config/gits/gits.json
+	# or if you have $XDG_CONFIG_HOME
+	mkdir -p "$XDG_CONFIG_HOME"/gits
+	gits -template > "$XDG_CONFIG_HOME"/gits/gits.json
+	```
 
-5. **Conf Path**  
-  if you have one, default configuration directory is setting  
+2. Append some repositories
+	```sh
+	# append from PWD
+	cd /path/to/repository && gits -add .
+	# or
+	gits -add /path/to/repository
+	# or open with $EDITOR then edit
+	gits -edit
+	```
 
-  output candidate directories `gits --candidate-dirs`
-  - on linux
-```
-high-priority
-$HOME/.gits
-$HOME/.config/gits
-low-priority
-```
+3. Can run some commands on all repositories
+	```sh
+	gits status
+	gits diff
+	gits fetch
+	# ...etc
 
-  - on windows
-```
-high-priority
-%USERPROFILE%\config\gits
-%USERPROFILE%\AppData\Local\gits
-low-priority
-```
+	# exchange executable from git(default)
+	gits -exec pwd
 
-  if you use default conf path, you can trim conf flag  
-  - output default conf path  
-```sh
-gits -conf-path
-```
+	# see "allowd_commands" on configuration file
+	```
+
+4. If need remove repository from configuration file
+	```sh
+	# first check the list
+	gits -list-keys
+	# or show full list
+	gits -list
+
+	# after check the key then remove repository from configuration file
+	gits -rm $key
+	# or edit yourself
+	vim /path/to/conf
+	# or open with $EDITOR
+	gits -edit
+	```
 
 
 Requirements:
 -------------
 git
 
-
 Install:
 --------
 ```sh
-go get github.com/kamisari/gits
+go get -v -u github.com/kamisari/gits
 ```
-
 
 License:
 --------
