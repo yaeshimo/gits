@@ -256,6 +256,7 @@ func Template() ([]byte, error) {
 	gits.AllowCommands["git"]["diff"] = "diff --stat"
 	gits.AllowCommands["git"]["ls"] = "ls-files"
 	gits.AllowCommands["ls"] = make(map[string]string)
+	gits.AllowCommands["pwd"] = make(map[string]string)
 	if err := gits.AddRepository("", ""); err != nil {
 		return nil, fmt.Errorf("%v\nRecurire run on the git repository", err)
 	}

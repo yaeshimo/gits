@@ -41,11 +41,11 @@ type option struct {
 	rm    string
 	prune bool
 
-	list         bool
-	listRepo     bool
-	listRepoFull bool
-	listAlias    bool
-	listConfig   bool
+	list           bool
+	listRepo       bool
+	listRepoFull   bool
+	listAlias      bool
+	listCandidates bool
 
 	template bool
 }
@@ -72,10 +72,10 @@ func init() {
 	log.SetPrefix("[" + name + "]:")
 	flag.BoolVar(&opt.version, "version", false, "show version")
 	flag.StringVar(&opt.conf, "config", "", "specify path to configuration JSON format files")
-	flag.StringVar(&opt.exec, "exec", "git", "specify execute command name")
+	flag.StringVar(&opt.exec, "exec", "git", "specify executable command name")
 
 	flag.StringVar(&opt.key, "key", "", "specify repository name for append repository")
-	flag.StringVar(&opt.match, "match", "", "match for pick repostories")
+	flag.StringVar(&opt.match, "match", "", "for pick any repostories with regexp RE2")
 
 	flag.BoolVar(&opt.edit, "edit", false, "edit config")
 	flag.StringVar(&opt.add, "add", "", "specify path to directory for add to configuration files")
@@ -86,7 +86,7 @@ func init() {
 	flag.BoolVar(&opt.listRepo, "list-repo", false, "list repositories")
 	flag.BoolVar(&opt.listRepoFull, "list-repo-full", false, "list repositories with full path")
 	flag.BoolVar(&opt.listAlias, "list-alias", false, "list alias")
-	flag.BoolVar(&opt.listConfig, "list-config", false, "list candidate paths to the configuration file")
+	flag.BoolVar(&opt.listCandidates, "list-candidates", false, "list candidate paths to the configuration file")
 
 	flag.BoolVar(&opt.template, "template", false, "show configuration template")
 }
@@ -175,7 +175,7 @@ func main() {
 		if err := gits.ListAlias(os.Stdout, opt.exec); err != nil {
 			log.Fatal(err)
 		}
-	case opt.listConfig:
+	case opt.listCandidates:
 		fmt.Fprintf(os.Stdout, "Candidates:\n[high priority]\n")
 		for i, s := range CandidateConfPaths {
 			fmt.Fprintf(os.Stdout, "\t%d. %s\n", i+1, s)

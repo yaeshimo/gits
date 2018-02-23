@@ -7,7 +7,7 @@ Usage:
 1. Generate JSON format configuration file (is contain paths to git repositories)
 	```sh
 	# list candidate paths to the configuration file
-	gits -list-config
+	gits -list-candidates
 
 	# change directory to repository
 	cd /path/to/repository
@@ -36,25 +36,32 @@ Usage:
 	gits -edit
 	```
 
-3. Run commands on all repositories
+3. Can run some commands on all repositories
 	```sh
 	gits status
 	gits diff
 	gits fetch
 	# ...etc
 
+	# exchange executable from git(default)
+	gits -exec pwd
+
 	# see "allowd_commands" on configuration file
 	```
 
 4. If need remove repository from configuration file
 	```sh
-	# list key of repositories
+	# first check the list
 	gits -list-keys
 	# or show full list
 	gits -list
 
 	# after check the key then remove repository from configuration file
 	gits -rm $key
+	# or edit yourself
+	vim /path/to/conf
+	# or open with $EDITOR
+	gits -edit
 	```
 
 
