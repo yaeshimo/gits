@@ -1,8 +1,5 @@
 package main
 
-//	TODO: impl tests
-//		: consider to separate to some functions for to simpl
-
 import (
 	"flag"
 	"fmt"
@@ -10,6 +7,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
 	"strings"
 )
 
@@ -21,9 +20,17 @@ const (
 // Default values
 // TODO: separate to conf_*.go files?
 var (
-	// TODO: consider change to []string{"$HOME/gits.json"}
-	CandidateConfPaths = []string{}
-	EditorWithArgs     = []string{"vim", "--"}
+	CandidateConfPaths = func() (s []string) {
+		u, err := user.Current()
+		if err != nil {
+			return
+		}
+		if u.HomeDir != "" {
+			s = append(s, filepath.Join(u.HomeDir, ".gits.json"))
+		}
+		return
+	}()
+	EditorWithArgs = []string{"vim", "--"}
 )
 
 type option struct {
