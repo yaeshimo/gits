@@ -88,10 +88,17 @@ func init() {
 	flag.BoolVar(&opt.template, "template", false, "show configuration template")
 }
 
-// TODO: error handling for fmt
 func main() {
+	// TODO: consider
+	validateArgs := func() {
+		if flag.NArg() != 0 {
+			log.Fatalf("invalid arguments %v\n", flag.Args())
+		}
+	}
+
 	flag.Parse()
 	if opt.version {
+		validateArgs()
 		fmt.Fprintf(os.Stdout, "%s version %s\n", name, version)
 		return
 	}
@@ -103,6 +110,7 @@ func main() {
 		}
 	}
 	if opt.edit {
+		validateArgs()
 		if err := Edit(os.Stdout, os.Stderr, os.Stdin, opt.conf); err != nil {
 			log.Fatal(err)
 		}
@@ -125,6 +133,7 @@ func main() {
 	// 3. output err or valid message
 	switch {
 	case opt.add != "":
+		validateArgs()
 		root, err := GetGitToplevel(opt.add)
 		if err != nil {
 			log.Fatal(err)
@@ -141,6 +150,7 @@ func main() {
 		}
 		fmt.Fprintf(os.Stdout, "Updated:\n\t[%s]\n", gits.path)
 	case opt.rm != "":
+		validateArgs()
 		if err := gits.RemoveRepository(opt.rm); err != nil {
 			log.Fatal(err)
 		}
@@ -153,6 +163,7 @@ func main() {
 		}
 		fmt.Fprintf(os.Stdout, "Updated:\n\t[%s]\n", gits.path)
 	case opt.prune:
+		validateArgs()
 		if removed, err := gits.Prune(); err != nil {
 			log.Fatal(err)
 		} else if len(removed) != 0 {
@@ -167,24 +178,30 @@ func main() {
 		}
 		fmt.Fprintf(os.Stdout, "Updated:\n\t[%s]\n", gits.path)
 	case opt.list:
+		validateArgs()
 		if err := gits.FprintIndent(os.Stdout, "", "\t"); err != nil {
 			log.Fatal(err)
 		}
 	case opt.listRepo:
+		validateArgs()
 		gits.ListRepositories(os.Stdout)
 	case opt.listRepoFull:
+		validateArgs()
 		gits.ListRepositoriesFull(os.Stdout)
 	case opt.listAlias:
+		validateArgs()
 		if err := gits.ListAlias(os.Stdout, opt.exec); err != nil {
 			log.Fatal(err)
 		}
 	case opt.listCandidates:
+		validateArgs()
 		fmt.Fprintf(os.Stdout, "Candidates:\n[high priority]\n")
 		for i, s := range CandidateConfPaths {
 			fmt.Fprintf(os.Stdout, "\t%d. %s\n", i+1, s)
 		}
 		fmt.Fprintln(os.Stdout, "[low priority]")
 	case opt.template:
+		validateArgs()
 		b, err := Template()
 		if err != nil {
 			log.Fatal(err)

@@ -20,8 +20,7 @@ const ValidData = `{
 			"status": "-c color.status=always status"
 		}
 	},
-	"repositories": {
-	}
+	"repositories": {}
 }`
 
 // invalid "gits.json"
