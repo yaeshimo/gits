@@ -143,7 +143,7 @@ func (gits *Gits) AddRepository(key string, path string) error {
 		key = filepath.Base(abs)
 	}
 	if _, ok := gits.Repositories[key]; ok {
-		return fmt.Errorf("Repository=[%s] is already exists in %s", key, gits.path)
+		return fmt.Errorf("[Repositor]: %#v is already exists in %s", key, gits.path)
 	}
 	gits.Repositories[key] = Repository{
 		WorkTree: abs,
@@ -259,7 +259,7 @@ func (gits *Gits) Run(w, errw io.Writer, r io.Reader, args []string) int {
 	fmt.Fprintf(w, "exec=[%s] args=%v\n", name, allowArgs)
 	var exit int
 	for key, rep := range gits.Repositories {
-		fmt.Fprintf(w, "\nRepository=[%s]\n", key)
+		fmt.Fprintf(w, "\n[Repository]: %#v\n", key)
 		if err := rep.Exec(w, errw, r, name, allowArgs); err != nil {
 			fmt.Fprintln(errw, err)
 			exit = 2
