@@ -114,46 +114,6 @@ func (gits *Gits) ParseArgs(args []string) (cmdName string, allowArgs []string, 
 	return name, strings.Fields(line), true
 }
 
-// Run can use
-// gits -- git remote set-url origin git@github.com:UserName/$(basename $(pwd)).git
-// "allow_commands": {
-//   "git": {
-//     "seturl": "remote set-url origin git@github.com:${UserName}/$(basename $(pwd)).git"
-//   }
-// }
-// match is for pick the repositories
-func (gits *Gits) Run(w, errw io.Writer, r io.Reader, match string, args []string) int {
-	name, allowArgs, ok := gits.ParseArgs(args)
-	if !ok {
-		fmt.Fprintf(errw, "invalid arguments:%v\n", args)
-		return 1
-	}
-	if name == "git" && len(allowArgs) == 0 {
-		fmt.Fprintf(errw, "need specify alias. see [gits -list-alias]\n")
-		return 1
-	}
-
-	matchString := func(key string) bool { return true }
-	if match != "" {
-		reg := regexp.MustCompile(match)
-		matchString = reg.MatchString
-	}
-
-	fmt.Fprintf(w, "exec=[%s] args=%v\n", name, allowArgs)
-	var exit int
-	for key, rep := range gits.Repositories {
-		if !matchString(key) {
-			continue
-		}
-		fmt.Fprintf(w, "\nRepository=[%s]\n", key)
-		if err := rep.Exec(w, errw, r, name, allowArgs); err != nil {
-			fmt.Fprintln(errw, err)
-			exit = 2
-		}
-	}
-	return exit
-}
-
 // GetGitToplevel depends get the top of worktree
 // NOTE: depends on "git"
 // TODO: consider
@@ -197,6 +157,20 @@ func (gits *Gits) RemoveRepository(key string) error {
 		return fmt.Errorf("not exists: %v", key)
 	}
 	delete(gits.Repositories, key)
+	return nil
+}
+
+// RemoveMatchRepositories delete repositories from match strings
+func (gits *Gits) RemoveMatchRepositories(match string) error {
+	reg, err := regexp.Compile(match)
+	if err != nil {
+		return err
+	}
+	for key := range gits.Repositories {
+		if !reg.MatchString(key) {
+			delete(gits.Repositories, key)
+		}
+	}
 	return nil
 }
 
@@ -262,4 +236,34 @@ func Template() ([]byte, error) {
 		return nil, fmt.Errorf("%v\nRecurire run on the git repository", err)
 	}
 	return json.MarshalIndent(gits, "", "\t")
+}
+
+// Run can use
+// gits -- git remote set-url origin git@github.com:UserName/$(basename $(pwd)).git
+// "allow_commands": {
+//   "git": {
+//     "seturl": "remote set-url origin git@github.com:${UserName}/$(basename $(pwd)).git"
+//   }
+// }
+func (gits *Gits) Run(w, errw io.Writer, r io.Reader, args []string) int {
+	name, allowArgs, ok := gits.ParseArgs(args)
+	if !ok {
+		fmt.Fprintf(errw, "invalid arguments:%v\n", args)
+		return 1
+	}
+	if name == "git" && len(allowArgs) == 0 {
+		fmt.Fprintf(errw, "need specify alias. see [gits -list-alias]\n")
+		return 1
+	}
+
+	fmt.Fprintf(w, "exec=[%s] args=%v\n", name, allowArgs)
+	var exit int
+	for key, rep := range gits.Repositories {
+		fmt.Fprintf(w, "\nRepository=[%s]\n", key)
+		if err := rep.Exec(w, errw, r, name, allowArgs); err != nil {
+			fmt.Fprintln(errw, err)
+			exit = 2
+		}
+	}
+	return exit
 }

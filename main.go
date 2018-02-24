@@ -108,9 +108,15 @@ func main() {
 		}
 		return
 	}
+
 	gits, err := ReadJSON(opt.conf)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if opt.match != "" {
+		if err := gits.RemoveMatchRepositories(opt.match); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// TODO: consider to split to functions from flags
@@ -186,6 +192,6 @@ func main() {
 		fmt.Fprintf(os.Stdout, "%s\n", string(b))
 	default:
 		args := append([]string{opt.exec}, flag.Args()...)
-		os.Exit(gits.Run(os.Stdout, os.Stderr, os.Stdin, opt.match, args))
+		os.Exit(gits.Run(os.Stdout, os.Stderr, os.Stdin, args))
 	}
 }

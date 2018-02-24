@@ -197,14 +197,14 @@ func TestGitsRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if exitCode := gits.Run(buf, buf, nil, "", []string{"git", "status"}); exitCode != 0 {
+	if exitCode := gits.Run(buf, buf, nil, []string{"git", "status"}); exitCode != 0 {
 		t.Fatal("exitCode:", exitCode)
 	}
 	t.Log(buf)
 
 	buf.Reset()
 
-	if exitCode := gits.Run(buf, buf, nil, "", []string{"git", "status", "invalid"}); exitCode == 0 {
+	if exitCode := gits.Run(buf, buf, nil, []string{"git", "status", "invalid"}); exitCode == 0 {
 		t.Fatal("expected exit code is != 0 but 0")
 	}
 	t.Log(buf)
