@@ -1,39 +1,19 @@
 gits
 ====
-taskrunner for git repositories
+gits is command runner for git repositories
 
 Usage:
 ------
-1. Generate JSON format configuration file (is contain paths to git repositories)
+1. Generate JSON format configuration file
 	```sh
-	# list candidate paths
-	gits -list-candidates
-	```
-
-	```sh
-	# change directory to repository
 	cd /path/to/repository
-
-	# output template to stdout
-	gits -template
-
-	# after check the candidate paths and template
-	# write configuration file
-
-	# on linux
 	gits -template > "$HOME"/.gits.json
-	# or
-	mkdir -p "$HOME"/.config/gits
-	gits -template > "$HOME"/.config/gits/gits.json
-	# or if you have $XDG_CONFIG_HOME
-	mkdir -p "$XDG_CONFIG_HOME"/gits
-	gits -template > "$XDG_CONFIG_HOME"/gits/gits.json
 	```
 
 2. Append some repositories
 	```sh
 	# append from pwd
-	cd /path/to/repository && gits -add .
+	cd /path/to/repository && gits -add ./
 	# or open with $EDITOR then edit
 	gits -edit
 	```
@@ -53,19 +33,30 @@ Usage:
 
 4. If need remove repository from configuration file
 	```sh
-	# first check the list
+	# show keys
 	gits -list-keys
-	# or show full list
-	gits -list
-
-	# after check the key then remove repository from configuration file
+	# remove repository from configuration file
 	gits -rm "$repokey"
+
 	# or edit yourself
 	vim /path/to/gits.json
-	# or open with $EDITOR
+	# or open with $EDITOR then edit
 	gits -edit
 	```
 
+5. Other options
+	```sh
+	# show help
+	gits -help
+	```
+	```sh
+	# list candidate paths of configuration file
+	gits -list-candidates
+	```
+	```sh
+	# pick the repositories with regex RE2
+	gits -match "^go-.*" status
+	```
 
 Requirements:
 -------------
