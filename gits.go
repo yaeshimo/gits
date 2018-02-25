@@ -245,25 +245,26 @@ func Template() ([]byte, error) {
 //     "seturl": "remote set-url origin git@github.com:${UserName}/$(basename $(pwd)).git"
 //   }
 // }
-func (gits *Gits) Run(w, errw io.Writer, r io.Reader, args []string) int {
+// consider to return type error
+func (gits *Gits) Run(w, errw io.Writer, r io.Reader, args []string) error {
 	name, allowArgs, ok := gits.ParseArgs(args)
 	if !ok {
-		fmt.Fprintf(errw, "invalid arguments:%v\n", args)
-		return 1
+		return fmt.Errorf("invalid arguments:%v", args)
 	}
 	if name == "git" && len(allowArgs) == 0 {
-		fmt.Fprintf(errw, "need specify alias. see [gits -list-alias]\n")
-		return 1
+		return fmt.Errorf("need specify alias. see [gits -list-alias]")
 	}
 
 	fmt.Fprintf(w, "exec=[%s] args=%v\n", name, allowArgs)
-	var exit int
+	var errors []error
 	for key, rep := range gits.Repositories {
 		fmt.Fprintf(w, "\n[Repository]: %#v\n", key)
 		if err := rep.Exec(w, errw, r, name, allowArgs); err != nil {
-			fmt.Fprintln(errw, err)
-			exit = 2
+			errors = append(errors, fmt.Errorf("[%v %v]", key, err))
 		}
 	}
-	return exit
+	if len(errors) != 0 {
+		return fmt.Errorf("Errors: %v", errors)
+	}
+	return nil
 }

@@ -36,8 +36,7 @@ var (
 type option struct {
 	version bool
 	conf    string
-	// TODO: consider to remove
-	exec string
+	exec    string
 
 	match string
 
@@ -56,21 +55,6 @@ type option struct {
 }
 
 var opt = &option{}
-
-// Edit edit configuration file
-func Edit(w, errw io.Writer, r io.Reader, path string) error {
-	if len(EditorWithArgs) < 1 {
-		return fmt.Errorf("invalid [EditorWithArgs]: %v", EditorWithArgs)
-	}
-	editor := exec.Command(EditorWithArgs[0], append(EditorWithArgs[1:], path)...)
-	editor.Stdout = w
-	editor.Stderr = errw
-	editor.Stdin = r
-	if _, err := fmt.Fprintln(w, editor.Args); err != nil {
-		return err
-	}
-	return editor.Run()
-}
 
 func init() {
 	log.SetFlags(log.Lshortfile)
@@ -93,6 +77,21 @@ func init() {
 	flag.BoolVar(&opt.listCandidates, "list-candidates", false, "list candidate paths to the configuration file")
 
 	flag.BoolVar(&opt.template, "template", false, "show configuration template")
+}
+
+// Edit edit configuration file
+func Edit(w, errw io.Writer, r io.Reader, path string) error {
+	if len(EditorWithArgs) < 1 {
+		return fmt.Errorf("invalid [EditorWithArgs]: %v", EditorWithArgs)
+	}
+	editor := exec.Command(EditorWithArgs[0], append(EditorWithArgs[1:], path)...)
+	editor.Stdout = w
+	editor.Stderr = errw
+	editor.Stdin = r
+	if _, err := fmt.Fprintln(w, editor.Args); err != nil {
+		return err
+	}
+	return editor.Run()
 }
 
 func main() {
@@ -219,6 +218,8 @@ func main() {
 		fmt.Fprintf(os.Stdout, "%s\n", string(b))
 	default:
 		args := append([]string{opt.exec}, flag.Args()...)
-		os.Exit(gits.Run(os.Stdout, os.Stderr, os.Stdin, args))
+		if err := gits.Run(os.Stdout, os.Stderr, os.Stdin, args); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
