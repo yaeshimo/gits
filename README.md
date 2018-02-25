@@ -1,22 +1,26 @@
 gits
 ====
-Management tool for git repositories
+taskrunner for git repositories
 
 Usage:
 ------
 1. Generate JSON format configuration file (is contain paths to git repositories)
 	```sh
-	# list candidate paths to the configuration file
+	# list candidate paths
 	gits -list-candidates
+	```
 
+	```sh
 	# change directory to repository
 	cd /path/to/repository
 
-	# output to stdout then check the template
+	# output template to stdout
 	gits -template
 
-	# on linux
+	# after check the candidate paths and template
 	# write configuration file
+
+	# on linux
 	gits -template > "$HOME"/.gits.json
 	# or
 	mkdir -p "$HOME"/.config/gits
@@ -28,10 +32,8 @@ Usage:
 
 2. Append some repositories
 	```sh
-	# append from PWD
+	# append from pwd
 	cd /path/to/repository && gits -add .
-	# or
-	gits -add /path/to/repository
 	# or open with $EDITOR then edit
 	gits -edit
 	```
@@ -43,7 +45,7 @@ Usage:
 	gits fetch
 	# ...etc
 
-	# exchange executable from git(default)
+	# exchange executable
 	gits -exec pwd
 
 	# see "allowd_commands" on configuration file
@@ -57,9 +59,9 @@ Usage:
 	gits -list
 
 	# after check the key then remove repository from configuration file
-	gits -rm $key
+	gits -rm "$repokey"
 	# or edit yourself
-	vim /path/to/conf
+	vim /path/to/gits.json
 	# or open with $EDITOR
 	gits -edit
 	```
