@@ -18,7 +18,7 @@ const (
 )
 
 // Default values
-// TODO: separate to conf_*.go files?
+// TODO: separate to conf_*.go
 var (
 	CandidateConfPaths = func() (s []string) {
 		u, err := user.Current()
@@ -175,6 +175,9 @@ func main() {
 			log.Fatal(err)
 		} else if len(removed) != 0 {
 			fmt.Fprintf(os.Stdout, "Pruned:\n\t\"%s\"\n", strings.Join(removed, "\n\t"))
+		} else {
+			fmt.Fprintf(os.Stdout, "Already clean\n")
+			return
 		}
 		if err := gits.Update(); err != nil {
 			log.Fatal(err)
