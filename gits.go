@@ -15,7 +15,6 @@ import (
 
 // Repository fields for repository list
 // WorkTree is git --work-tree
-// TODO: consider join to Gits and remove Git
 type Repository struct {
 	WorkTree string `json:"worktree"`
 }
@@ -37,14 +36,13 @@ func (rep *Repository) Exec(w, errw io.Writer, r io.Reader, name string, args []
 // Gits is for json configuration files
 // AllowCommands is map of allow commands, [exec]->[alias]->args
 // Repositories is map to repositories
-// TODO: consider join Repository
 type Gits struct {
 	// path to configuration files
 	path string
 
 	// execName->alias->cmdLine
-	AllowCommands map[string]map[string]string `json:"allow_commands"`
-	Repositories  map[string]Repository        `json:"repositories"`
+	AllowCommands map[string]map[string][]string `json:"allow_commands"`
+	Repositories  map[string]Repository          `json:"repositories"`
 }
 
 // ReadJSON read json from file
@@ -86,34 +84,6 @@ func (gits *Gits) Update() error {
 	return gits.WriteFile(gits.path)
 }
 
-// ParseArgs get cmdname, allowed args and valid state
-// TODO: consider to simpl
-func (gits *Gits) ParseArgs(args []string) (cmdName string, allowArgs []string, ok bool) {
-	n := len(args)
-	if n == 0 {
-		return "", nil, false
-	}
-	name := args[0]
-	// check command name
-	aliasMap, ok := gits.AllowCommands[name]
-	if !ok {
-		return "", nil, false
-	}
-	if n == 1 {
-		// accept only single command name
-		return name, nil, true
-	}
-	// check alias
-	if n != 2 {
-		return "", nil, false
-	}
-	line, ok := aliasMap[args[1]]
-	if !ok {
-		return "", nil, false
-	}
-	return name, strings.Fields(line), true
-}
-
 // GetGitToplevel depends get the top of worktree
 // NOTE: depends on "git"
 // TODO: consider
@@ -132,7 +102,6 @@ func GetGitToplevel(path string) (string, error) {
 }
 
 // AddRepository append repository
-// TODO: consider to remove the key
 func (gits *Gits) AddRepository(key string, path string) error {
 	abs, err := GetGitToplevel(path)
 	if err != nil {
@@ -222,40 +191,57 @@ func (gits *Gits) ListAlias(w io.Writer, exec string) error {
 // Template return template
 func Template() ([]byte, error) {
 	gits := &Gits{
-		AllowCommands: make(map[string]map[string]string),
+		AllowCommands: make(map[string]map[string][]string),
 		Repositories:  make(map[string]Repository),
 	}
-	gits.AllowCommands["git"] = make(map[string]string)
-	gits.AllowCommands["git"]["status"] = "-c color.status=always status"
-	gits.AllowCommands["git"]["fetch"] = "fetch"
-	gits.AllowCommands["git"]["diff"] = "diff --stat"
-	gits.AllowCommands["git"]["ls"] = "ls-files"
-	gits.AllowCommands["ls"] = make(map[string]string)
-	gits.AllowCommands["pwd"] = make(map[string]string)
+	gits.AllowCommands["git"] = make(map[string][]string)
+	gits.AllowCommands["git"]["status"] = []string{"-c", "color.status=always", "status"}
+	gits.AllowCommands["git"]["fetch"] = []string{"fetch"}
+	gits.AllowCommands["git"]["diff"] = []string{"diff", "--stat"}
+	gits.AllowCommands["git"]["ls"] = []string{"ls-files"}
+	gits.AllowCommands["ls"] = make(map[string][]string)
+	gits.AllowCommands["ls"]["la"] = []string{"-lah", "--color=auto"}
+	gits.AllowCommands["pwd"] = make(map[string][]string)
 	if err := gits.AddRepository("", ""); err != nil {
 		return nil, fmt.Errorf("%v\nRecurire run on the git repository", err)
 	}
 	return json.MarshalIndent(gits, "", "\t")
 }
 
-// Run can use
-// gits -- git remote set-url origin git@github.com:UserName/$(basename $(pwd)).git
-// "allow_commands": {
-//   "git": {
-//     "seturl": "remote set-url origin git@github.com:${UserName}/$(basename $(pwd)).git"
-//   }
-// }
-// consider to return type error
-func (gits *Gits) Run(w, errw io.Writer, r io.Reader, args []string) error {
-	name, allowArgs, ok := gits.ParseArgs(args)
-	if !ok {
-		return fmt.Errorf("invalid arguments:%v", args)
+// ParseArgs if args is invalid then return name is ""
+func (gits *Gits) ParseArgs(executable string, alias string) (name string, allowArgs []string) {
+	if executable == "" {
+		return "", nil
 	}
+	// check command cmdName
+	aliasMap, ok := gits.AllowCommands[executable]
+	if !ok {
+		return "", nil
+	}
+	if alias == "" {
+		// accept only single command
+		return executable, nil
+	}
+	allowArgs, ok = aliasMap[alias]
+	if !ok {
+		return "", nil
+	}
+	return executable, allowArgs
+}
+
+// Run args[0] == executable, args[1 == alias
+func (gits *Gits) Run(w, errw io.Writer, r io.Reader, executable string, alias string) error {
+	name, allowArgs := gits.ParseArgs(executable, alias)
+	if name == "" {
+		return fmt.Errorf("invalid arguments:%v %v", executable, alias)
+	}
+
+	// TODO: remove?
 	if name == "git" && len(allowArgs) == 0 {
 		return fmt.Errorf("need specify alias. see [gits -list-alias]")
 	}
 
-	fmt.Fprintf(w, "exec=[%s] args=%v\n", name, allowArgs)
+	fmt.Fprintf(w, "exec=[%s] args=%q\n", name, allowArgs)
 	var errors []error
 	for key, rep := range gits.Repositories {
 		fmt.Fprintf(w, "\n[Repository]: %#v\n", key)

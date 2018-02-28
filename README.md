@@ -44,7 +44,7 @@ Usage:
 	gits -edit
 	```
 
-5. Other options
+5. Other options and Examples
 	```sh
 	# show help
 	gits -help
@@ -56,6 +56,12 @@ Usage:
 	```sh
 	# pick the repositories with regex RE2
 	gits -match "^go-.*" status
+	```
+	```sh
+	# set url
+	# append "allow_commands" in configuration file
+	# "sh": { "set-url": [ "-c", "git remote set-url origin git@github.com:$(git config user.name)/$(basename $(pwd)).git" ] }
+	gits -exec sh set-url
 	```
 
 Requirements:

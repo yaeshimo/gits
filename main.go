@@ -14,7 +14,7 @@ import (
 
 const (
 	name    = "gits"
-	version = "0.1.0dev"
+	version = "0.2.0dev"
 )
 
 // Default values
@@ -95,14 +95,21 @@ func Edit(w, errw io.Writer, r io.Reader, path string) error {
 }
 
 func main() {
+	// TODO: consider to split to functions from flags
+	// 1. run
+	// 2. check error
+	// 3. output err or valid message
+
 	// TODO: consider
 	validateArgs := func() {
 		if flag.NArg() != 0 {
+			flag.PrintDefaults()
 			log.Fatalf("invalid arguments %v\n", flag.Args())
 		}
 	}
 
 	flag.Parse()
+
 	if opt.version {
 		validateArgs()
 		fmt.Fprintf(os.Stdout, "%s version %s\n", name, version)
@@ -122,6 +129,24 @@ func main() {
 		}
 		return
 	}
+	if opt.template {
+		validateArgs()
+		b, err := Template()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Fprintf(os.Stdout, "%s\n", string(b))
+		return
+	}
+	if opt.listCandidates {
+		validateArgs()
+		fmt.Fprintf(os.Stdout, "Candidates:\n[high priority]\n")
+		for i, s := range CandidateConfPaths {
+			fmt.Fprintf(os.Stdout, "\t%d. %s\n", i+1, s)
+		}
+		fmt.Fprintln(os.Stdout, "[low priority]")
+		return
+	}
 
 	gits, err := ReadJSON(opt.conf)
 	if err != nil {
@@ -132,11 +157,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-
-	// TODO: consider to split to functions from flags
-	// 1. run
-	// 2. check error
-	// 3. output err or valid message
 	switch {
 	case opt.add != "":
 		validateArgs()
@@ -202,23 +222,14 @@ func main() {
 		if err := gits.ListAlias(os.Stdout, opt.exec); err != nil {
 			log.Fatal(err)
 		}
-	case opt.listCandidates:
-		validateArgs()
-		fmt.Fprintf(os.Stdout, "Candidates:\n[high priority]\n")
-		for i, s := range CandidateConfPaths {
-			fmt.Fprintf(os.Stdout, "\t%d. %s\n", i+1, s)
-		}
-		fmt.Fprintln(os.Stdout, "[low priority]")
-	case opt.template:
-		validateArgs()
-		b, err := Template()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Fprintf(os.Stdout, "%s\n", string(b))
 	default:
-		args := append([]string{opt.exec}, flag.Args()...)
-		if err := gits.Run(os.Stdout, os.Stderr, os.Stdin, args); err != nil {
+		var alias string
+		if n := flag.NArg(); n == 1 {
+			alias = flag.Arg(0)
+		} else if n != 0 {
+			log.Fatalf("invalid arguments: %v", flag.Args())
+		}
+		if err := gits.Run(os.Stdout, os.Stderr, os.Stdin, opt.exec, alias); err != nil {
 			log.Fatal(err)
 		}
 	}

@@ -13,11 +13,11 @@ import (
 const ValidData = `{
 	"allow_commands": {
 		"git": {
-			"diff": "diff --stat",
-			"fetch": "fetch",
-			"log": "log -p",
-			"ls": "ls-files",
-			"status": "-c color.status=always status"
+			"diff": [ "diff", "--stat" ],
+			"fetch": [ "fetch" ],
+			"log": [ "log", "-p" ],
+			"ls": [ "ls-files" ],
+			"status": [ "-c", "color.status=always", "status" ]
 		}
 	},
 	"repositories": {}
@@ -173,11 +173,11 @@ func TestGitsValidArgs(t *testing.T) {
 
 	s1 := []string{"git", "status"}
 	t.Log(s1)
-	t.Log(gits.ParseArgs(s1))
+	t.Log(gits.ParseArgs(s1[0], s1[1]))
 
 	s2 := []string{"git", "invalid"}
 	t.Log(s2)
-	t.Log(gits.ParseArgs(s2))
+	t.Log(gits.ParseArgs(s2[0], s2[1]))
 }
 
 // TODO: validate
@@ -196,14 +196,14 @@ func TestGitsRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := gits.Run(buf, buf, nil, []string{"git", "status"}); err != nil {
+	if err := gits.Run(buf, buf, nil, "git", "status"); err != nil {
 		t.Fatal(err)
 	}
 	t.Log(buf)
 
 	buf.Reset()
 
-	if err := gits.Run(buf, buf, nil, []string{"git", "status", "invalid"}); err == nil {
+	if err := gits.Run(buf, buf, nil, "git", "invalid"); err == nil {
 		t.Fatal("expected return error but nil")
 	}
 	t.Log(buf)
