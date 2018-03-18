@@ -27,40 +27,39 @@ const ValidData = `{
 const InvalidData = `{}`
 
 // test directory root
-const TestDir = "t"
+var TestRoot = func() string {
+	if abs, err := filepath.Abs("t"); err != nil {
+		panic(err)
+	} else {
+		return abs
+	}
+}()
 
-// TODO: consider to remove
-func makeGitRepository(t *testing.T) (gitdir string) {
-	tdir := filepath.Join(TestDir, t.Name())
-	if err := os.MkdirAll(tdir, 0777); err != nil {
+// return path to test directory and configuration file
+func makeTestDir(t *testing.T, validConf bool) (testDir string, testConf string) {
+	/// test directory
+	testDir = filepath.Join(TestRoot, t.Name())
+	if err := os.MkdirAll(testDir, 0777); err != nil {
 		t.Fatal(err)
 	}
+	/// git init
 	git := exec.Command("git", "init")
-	git.Dir = tdir
+	git.Dir = testDir
 	git.Stderr = nil
 	git.Stdout = nil
 	git.Stdin = nil
 	if err := git.Run(); err != nil {
 		t.Fatal(err)
 	}
-	return
-}
-
-// make "gits.json" return path to test directory and "gits.json"
-// TODO: remove tdir?
-func makeConf(t *testing.T, wantValid bool) (tdir string, tjson string) {
-	tdir = filepath.Join(TestDir, t.Name())
-	if err := os.MkdirAll(tdir, 0777); err != nil {
-		t.Fatal(err)
-	}
+	/// make gits.json
 	var data string
-	if wantValid {
+	if validConf {
 		data = ValidData
 	} else {
 		data = InvalidData
 	}
-	tjson = filepath.Join(tdir, "gits.json")
-	if err := ioutil.WriteFile(tjson, []byte(data), 0666); err != nil {
+	testConf = filepath.Join(testDir, "gits.json")
+	if err := ioutil.WriteFile(testConf, []byte(data), 0666); err != nil {
 		t.Fatal(err)
 	}
 	return
@@ -68,8 +67,8 @@ func makeConf(t *testing.T, wantValid bool) (tdir string, tjson string) {
 
 // TODO: validate
 func TestReadJSON(t *testing.T) {
-	_, tjson := makeConf(t, true)
-	gits, err := ReadJSON(tjson)
+	_, testConf := makeTestDir(t, true)
+	gits, err := ReadJSON(testConf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +85,7 @@ func TestReadJSON(t *testing.T) {
 
 // TODO: validate
 func TestGitsFprintIndent(t *testing.T) {
-	_, tjson := makeConf(t, true)
+	_, tjson := makeTestDir(t, true)
 	gits, err := ReadJSON(tjson)
 	if err != nil {
 		t.Fatal(err)
@@ -101,13 +100,11 @@ func TestGitsFprintIndent(t *testing.T) {
 
 // TODO: validate
 func TestGitsAdd(t *testing.T) {
-	_, tjson := makeConf(t, true)
+	gitdir, tjson := makeTestDir(t, true)
 	gits, err := ReadJSON(tjson)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	gitdir := makeGitRepository(t)
 
 	t.Logf("before:%v\n", gits)
 	if err := gits.AddRepository("", gitdir); err != nil {
@@ -118,13 +115,11 @@ func TestGitsAdd(t *testing.T) {
 
 // TODO: validate
 func TestGitsListRepositories(t *testing.T) {
-	_, tjson := makeConf(t, true)
+	gitdir, tjson := makeTestDir(t, true)
 	gits, err := ReadJSON(tjson)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	gitdir := makeGitRepository(t)
 
 	// TODO: consider
 	if err := gits.AddRepository("", gitdir); err != nil {
@@ -140,13 +135,11 @@ func TestGitsListRepositories(t *testing.T) {
 
 // TODO: vaildate
 func TestStatus(t *testing.T) {
-	_, tjson := makeConf(t, true)
+	gitdir, tjson := makeTestDir(t, true)
 	gits, err := ReadJSON(tjson)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	gitdir := makeGitRepository(t)
 
 	// TODO: consider
 	if err := gits.AddRepository("", gitdir); err != nil {
@@ -165,7 +158,7 @@ func TestStatus(t *testing.T) {
 
 // TODO: validate
 func TestGitsValidArgs(t *testing.T) {
-	_, tjson := makeConf(t, true)
+	_, tjson := makeTestDir(t, true)
 	gits, err := ReadJSON(tjson)
 	if err != nil {
 		t.Fatal(err)
@@ -182,14 +175,12 @@ func TestGitsValidArgs(t *testing.T) {
 
 // TODO: validate
 func TestGitsRun(t *testing.T) {
-	_, tjson := makeConf(t, true)
+	gitdir, tjson := makeTestDir(t, true)
 	gits, err := ReadJSON(tjson)
 	if err != nil {
 		t.Fatal(err)
 	}
 	buf := bytes.NewBufferString("")
-
-	gitdir := makeGitRepository(t)
 
 	// TODO: consider
 	if err := gits.AddRepository("", gitdir); err != nil {

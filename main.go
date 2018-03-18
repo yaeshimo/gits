@@ -14,7 +14,7 @@ import (
 
 const (
 	name    = "gits"
-	version = "0.2.0dev"
+	version = "0.3.0dev"
 )
 
 // Default values

@@ -12,8 +12,7 @@ Usage:
 
 2. Append some repositories
 	```sh
-	# append from pwd
-	cd /path/to/repository && gits -add ./
+	gits -add /path/to/repository
 	# or open with $EDITOR then edit
 	gits -edit
 	```
@@ -33,15 +32,16 @@ Usage:
 
 4. If need remove repository from configuration file
 	```sh
-	# show keys
-	gits -list-keys
-	# remove repository from configuration file
-	gits -rm "$repokey"
-
-	# or edit yourself
+	# edit yourself
 	vim /path/to/gits.json
 	# or open with $EDITOR then edit
 	gits -edit
+
+	# another way that use -rm option
+	# check tracked repositories
+	gits -list-repo
+	# remove repository from configuration file
+	gits -rm "repo"
 	```
 
 5. Other options and Examples

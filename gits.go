@@ -169,8 +169,8 @@ func (gits *Gits) ListRepositories(w io.Writer) error {
 // ListRepositoriesFull list key of Gits.Repositories
 func (gits *Gits) ListRepositoriesFull(w io.Writer) error {
 	var err error
-	for _, rep := range gits.Repositories {
-		_, err = fmt.Fprintln(w, rep.WorkTree)
+	for key, rep := range gits.Repositories {
+		_, err = fmt.Fprintf(w, "[%s]\n\t%s\n", key, rep.WorkTree)
 	}
 	return err
 }
