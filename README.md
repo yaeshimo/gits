@@ -71,7 +71,7 @@ git
 Install:
 --------
 ```sh
-go get -v -u github.com/kamisari/gits
+go get -v -u github.com/yaeshimo/gits
 ```
 
 License:
